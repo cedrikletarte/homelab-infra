@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  portfolio:
+    image: portfolio-app:latest
+    container_name: portfolio-app
+    restart: always
+    environment:
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio.rule=Host(`${PRIMARY_DOMAIN}`) || Host(`www.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.portfolio.entrypoints=websecure"
+      - "traefik.http.routers.portfolio.tls=true"
+      - "traefik.http.routers.portfolio.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=3000"
+      - "traefik.http.routers.portfolio.middlewares=crowdsec@file"
+
+networks:
+  proxy:
+    external: true

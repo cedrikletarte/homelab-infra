@@ -1,0 +1,246 @@
+name: multimedia
+services:
+  # Plex: Media server software
+  plex:
+    image: plexinc/pms-docker
+    container_name: plex
+    environment:
+      - TZ=America/Toronto
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - PLEX_UID=0
+      - PLEX_GID=0
+    volumes:
+      - plex_database:/config
+      - plex_transcode:/transcode
+      - /mnt/sdb1/media:/data
+    ports:
+      - 32400:32400/tcp
+    restart: always
+    networks:
+      - internal
+
+  # Seerr: Media request management and discovery tool
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
+    container_name: seerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=America/Montreal
+      - PORT=5055 #optional
+    volumes:
+      - seerr:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - proxy
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.seerr.rule=Host(`seerr.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.seerr.entrypoints=websecure"
+      - "traefik.http.routers.seerr.tls=true"
+      - "traefik.http.routers.seerr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
+      - "traefik.http.routers.seerr.middlewares=crowdsec@file"
+
+  # Flaresolverr: DNS resolver
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+      - TZ=America/Montreal
+    volumes:
+      - flaresolverr:/config
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+    networks:
+      - internal
+
+  # Gluetun: VPN client container to route traffic through a VPN
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      ## OPENVPN CONFIG ##
+      #- LOG_LEVEL=info
+      #- VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      #- OPENVPN_USER=${OPENVPN_USER}
+      #- OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+      #- OPENVPN_PROTOCOL=${OPENVPN_PROTOCOL}
+      #- SERVER_REGIONS=${SERVER_REGIONS}
+      #- PORT_FORWARD_ONLY=${PORT_FORWARD_ONLY}
+      #- VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING}
+      #- PRIVATE_INTERNET_ACCESS_OPENVPN_ENCRYPTION_PRESET=${PRIVATE_INTERNET_ACCESS_OPENVPN_ENCRYPTION_PRESET}
+      #- VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh /gluetun/scripts/portforward-up.sh {{PORT}} {{VPN_INTERFACE}}
+      #- VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh /gluetun/scripts/portforward-down.sh
+
+      ## WIREGUARD CONFIG ##
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - SERVER_NAMES=toronto405
+      - WIREGUARD_CONFIG_FILE=/gluetun/wireguard/wg0.conf
+      - LOG_LEVEL=info
+      # Port forwarding PIA
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=private internet access
+      - VPN_PORT_FORWARDING_USERNAME=${OPENVPN_USER}
+      - VPN_PORT_FORWARDING_PASSWORD=${OPENVPN_PASSWORD}
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh /gluetun/scripts/portforward-up.sh {{PORT}} {{VPN_INTERFACE}}
+      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh /gluetun/scripts/portforward-down.sh
+    volumes:
+      - gluetun:/gluetun
+      - ./gluetun/scripts/portforward-up.sh:/gluetun/scripts/portforward-up.sh
+      - ./gluetun/scripts/portforward-down.sh:/gluetun/scripts/portforward-down.sh
+      - ./gluetun/wg0.conf:/gluetun/wireguard/wg0.conf
+    ports:
+      - 8080:8080
+    restart: always
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # qBittorrent: BitTorrent client
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1006
+      - PGID=1004
+      - UMASK=000
+      - WEBUI_PORT=8080
+    volumes:
+      - qbittorrent:/config
+      - /mnt/sdb1/media:/data
+    network_mode: service:gluetun
+    ports: []
+    restart: always
+    depends_on:
+          gluetun:
+            condition: service_healthy
+
+  # Radarr: Movie collection manager
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1006
+      - PGID=1004
+      - TZ=GMT-4
+      - UMASK=002
+    ports:
+      - "7877:7877"
+    volumes:
+      - /mnt/sdb1/media:/data
+      - radarr:/config
+    restart: always
+    networks:
+      - internal
+
+
+  # Sonarr: TV series collection manager
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1006
+      - PGID=1004
+      - TZ=GMT-4
+      - UMASK=002
+    ports:
+      - "8988:8988"
+    volumes:
+      - /mnt/sdb1/media:/data
+      - sonarr:/config
+    restart: always
+    networks:
+      - internal
+
+  # Lidarr: Music collection manager
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1006
+      - PGID=1004
+      - TZ=GMT-4
+      - UMASK=002
+    ports:
+      - "8686:8686"
+    volumes:
+      - /mnt/sdb1/media:/data
+      - lidarr:/config
+    restart: always
+    networks:
+      - internal
+
+  # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - TZ=GMT-4
+    ports:
+      - "9696:9696"
+    volumes:
+      - prowlarr:/config
+    restart: always
+    networks:
+      - internal
+
+
+volumes:
+  gluetun:
+    name: gluetun
+    external: true
+  seerr:
+    name: seerr
+    external: true
+  plex_transcode:
+    name: plex_transcode
+    external: true
+  plex_database:
+    name: plex_database
+    external: true
+  prowlarr:
+    name: prowlarr
+    external: true
+  qbittorrent:
+    name: qbittorrent
+    external: true
+  radarr:
+    name: radarr
+    external: true
+  sonarr:
+    name: sonarr
+    external: true
+  lidarr:
+    name: lidarr
+    external: true
+  flaresolverr:
+    name: flaresolverr
+    external: true
+
+networks:
+  proxy:
+    external: true
+  internal:
+    name: media_internal

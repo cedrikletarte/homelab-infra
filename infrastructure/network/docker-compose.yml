@@ -1,0 +1,116 @@
+services:
+  # Cloudflare DDNS: Updates Cloudflare DNS records with the current IP address
+  cloudflare-ddns:
+    container_name: cloudflare-ddns
+    image: oznu/cloudflare-ddns:latest
+    restart: always
+    environment:
+      - API_KEY=${API_KEY}
+      - ZONE=${ZONE}
+      - PROXIED=true
+      - PUID=998
+      - PGID=100
+
+  # WireGuard: VPN server
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE #optional
+    environment:
+      - PUID=1008
+      - PGID=1008
+      - TZ=Etc/UTC
+      - SERVERURL=auto #optional
+      - SERVERPORT=51820 #optional
+      - PEERS=1 #optional
+      - PEERDNS=auto #optional
+      - INTERNAL_SUBNET=192.168.2.0/24 #optional
+      - ALLOWEDIPS=0.0.0.0/0 #optional
+      - PERSISTENTKEEPALIVE_PEERS= #optional
+      - LOG_CONFS=true #optional
+    volumes:
+      - wireguard_config:/config
+      - wireguard_modules:/lib/modules #optional
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: always
+
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: unless-stopped
+    environment:
+      - CF_DNS_API_TOKEN=${API_KEY}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8181:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/etc/traefik/acme
+    depends_on:
+      - crowdsec
+    networks:
+      - proxy
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    environment:
+      - COLLECTIONS=crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      - GID=1000
+    volumes:
+      - crowdsec-db:/var/lib/crowdsec/data/
+      - crowdsec-config:/etc/crowdsec/
+      - ./crowdsec/acquis.d/appsec.yaml:/etc/crowdsec/acquis.d/appsec.yaml
+      - /var/log:/var/log:ro
+    networks:
+      - proxy
+
+  # Nginx Proxy Manager: Manages proxy hosts with a simple web interface
+  #nginx:
+  #  image: 'jc21/nginx-proxy-manager:latest'
+  #  container_name: nginx
+  #  ports:
+  #    - '40080:80' # Public HTTP Port
+  #    - '40443:443' # Public HTTPS Port
+  #    - '40081:81' # Admin Web Port
+  #  environment:
+  #    # Enable real IP forwarding for Cloudflare
+  #    - DISABLE_IPV6=true
+  #  volumes:
+  #    - nginx_data:/data
+  #    - nginx_letsencrypt:/etc/letsencrypt
+  #  restart: always
+
+volumes:
+  wireguard_config:
+    name: wireguard_config
+    external: true
+  wireguard_modules:
+    name: wireguard_modules
+    external: true
+  crowdsec-config:
+    name: crowdsec-config
+    external: true
+  crowdsec-db:
+    name: crowdsec-db
+    external: true
+  traefik-acme:
+    name: traefik-acme
+    external: true
+  #nginx_data:
+  #  name: nginx_data
+  #nginx_letsencrypt:
+  #  name: nginx_letsencrypt
+
+networks:
+  proxy:
+    name: proxy 

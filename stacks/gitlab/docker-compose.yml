@@ -1,0 +1,47 @@
+name: gitlab
+services:
+  # gitlab: version system management
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    container_name: gitlab
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url '${EXTERNAL_URL}'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2424
+    ports:
+      - '8929:8929'
+      - '2424:22'
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    shm_size: '256m'
+
+  # gitlab runner: Pipeline runner for gitlab
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-config:/etc/gitlab-runner
+      - gitlab-runner-home:/home/gitlab-runner
+
+
+volumes:
+  gitlab-config:
+    name: gitlab-config
+    external: true
+  gitlab-logs:
+    name: gitlab-logs
+    external: true
+  gitlab-data:
+    name: gitlab-data
+    external: true
+  gitlab-runner-config:
+    name: gitlab-runner-config
+    external: true
+  gitlab-runner-home:
+    name: gitlab-runner-home
+    external: true

@@ -1,0 +1,24 @@
+http:
+  middlewares:
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecLapiKey: "${CROWDSEC_LAPI_KEY}"
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: "crowdsec:7422"
+          crowdsecAppsecFailureBlock: true
+          crowdsecAppsecUnreachableBlock: true
+
+    # Nextcloud
+    nextcloud-secure-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        referrerPolicy: "same-origin"
+
+    nextcloud-chain:
+      chain:
+        middlewares:
+          - nextcloud-secure-headers
+          - crowdsec
