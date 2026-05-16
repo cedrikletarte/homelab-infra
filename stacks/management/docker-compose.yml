@@ -42,7 +42,7 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     environment:
-      - TZ=GMT-4
+      - TZ=${TZ}
     volumes:
       - portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock

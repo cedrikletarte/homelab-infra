@@ -1,8 +1,12 @@
+# -- Environment --
 .env
 
-# -- gluetun --
+# -- Gluetun --
 wg0.conf
 
 # -- Traefik --
 traefik.yml
 middlewares.yml
+
+# -- Folder --
+stacks-unused

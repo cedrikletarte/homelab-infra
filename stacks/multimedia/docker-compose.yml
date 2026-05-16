@@ -5,19 +5,16 @@ services:
     image: plexinc/pms-docker
     container_name: plex
     environment:
-      - TZ=America/Toronto
+      - TZ=${TZ}
       - PLEX_CLAIM=${PLEX_CLAIM}
-      - PLEX_UID=0
-      - PLEX_GID=0
+      - PLEX_UID=${PLEX_UID}
+      - PLEX_GID=${PLEX_GID}
     volumes:
       - plex_database:/config
       - plex_transcode:/transcode
-      - /mnt/sdb1/media:/data
-    ports:
-      - 32400:32400/tcp
+      - ${MEDIA_PATH}:/data
     restart: always
-    networks:
-      - internal
+    network_mode: host
 
   # Seerr: Media request management and discovery tool
   seerr:
@@ -26,7 +23,7 @@ services:
     container_name: seerr
     environment:
       - LOG_LEVEL=debug
-      - TZ=America/Montreal
+      - TZ=${TZ}
       - PORT=5055 #optional
     volumes:
       - seerr:/app/config
@@ -49,7 +46,7 @@ services:
       - "traefik.http.services.seerr.loadbalancer.server.port=5055"
       - "traefik.http.routers.seerr.middlewares=crowdsec@file"
 
-  # Flaresolverr: DNS resolver
+  # Flaresolverr: Proxy server to bypass Cloudflare protection
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
@@ -57,7 +54,7 @@ services:
       - LOG_LEVEL=info
       - LOG_HTML=false
       - CAPTCHA_SOLVER=none
-      - TZ=America/Montreal
+      - TZ=${TZ}
     volumes:
       - flaresolverr:/config
     ports:
@@ -123,13 +120,14 @@ services:
     image: linuxserver/qbittorrent:latest
     container_name: qbittorrent
     environment:
-      - PUID=1006
-      - PGID=1004
-      - UMASK=000
+      - PUID=${MULTIMEDIA_UID}
+      - PGID=${MULTIMEDIA_GID}
+      - UMASK=002
       - WEBUI_PORT=8080
+      - TZ=${TZ}
     volumes:
       - qbittorrent:/config
-      - /mnt/sdb1/media:/data
+      - ${MEDIA_PATH}:/data
     network_mode: service:gluetun
     ports: []
     restart: always
@@ -142,14 +140,14 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     environment:
-      - PUID=1006
-      - PGID=1004
-      - TZ=GMT-4
+      - PUID=${MULTIMEDIA_UID}
+      - PGID=${MULTIMEDIA_GID}
+      - TZ=${TZ}
       - UMASK=002
     ports:
-      - "7877:7877"
+      - "7878:7878"
     volumes:
-      - /mnt/sdb1/media:/data
+      - ${MEDIA_PATH}:/data
       - radarr:/config
     restart: always
     networks:
@@ -161,14 +159,14 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment:
-      - PUID=1006
-      - PGID=1004
-      - TZ=GMT-4
+      - PUID=${MULTIMEDIA_UID}
+      - PGID=${MULTIMEDIA_GID}
+      - TZ=${TZ}
       - UMASK=002
     ports:
-      - "8988:8988"
+      - "8989:8989"
     volumes:
-      - /mnt/sdb1/media:/data
+      - ${MEDIA_PATH}:/data
       - sonarr:/config
     restart: always
     networks:
@@ -179,14 +177,14 @@ services:
     image: lscr.io/linuxserver/lidarr:latest
     container_name: lidarr
     environment:
-      - PUID=1006
-      - PGID=1004
-      - TZ=GMT-4
+      - PUID=${MULTIMEDIA_UID}
+      - PGID=${MULTIMEDIA_GID}
+      - TZ=${TZ}
       - UMASK=002
     ports:
       - "8686:8686"
     volumes:
-      - /mnt/sdb1/media:/data
+      - ${MEDIA_PATH}:/data
       - lidarr:/config
     restart: always
     networks:
@@ -197,7 +195,9 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment:
-      - TZ=GMT-4
+      - PUID=${MULTIMEDIA_UID}
+      - PGID=${MULTIMEDIA_GID}
+      - TZ=${TZ}
     ports:
       - "9696:9696"
     volumes:
