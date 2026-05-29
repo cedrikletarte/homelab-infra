@@ -51,10 +51,39 @@ services:
       - 9000:9000
     restart: always
 
+  # n8n: Workflow automation tool
+  n8n:
+    container_name: n8n
+    image: docker.n8n.io/n8nio/n8n
+    restart: unless-stopped
+    ports:
+      - 5678:5678
+    environment:
+      - GENERIC_TIMEZONE=${TZ}
+      - TZ=${TZ}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_SECURE_COOKIE=false
+      - NODES_EXCLUDE=[]
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DATABASE}
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_SCHEMA=${POSTGRES_SCHEMA}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - db_network
+
 
 volumes:
   homarr_appdata:
     name: homarr_appdata
+    external: true
+  n8n_data:
+    name: n8n_data
     external: true
   vaultwarden:
     name: vaultwarden
@@ -65,4 +94,6 @@ volumes:
 
 networks:
   proxy:
+    external: true
+  db_network:
     external: true
