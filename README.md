@@ -13,7 +13,7 @@ This repository contains my personal **Docker-based homelab infrastructure**. It
 │   ├── multimedia/
 │   ├── management/
 │   ├── gitlab/
-│
+│   └── database/
 │
 ├── infrastructure/        # Core infrastructure components
 │   └── network/

@@ -1,5 +1,5 @@
 services:
-  # Cloudflare DDNS: Updates Cloudflare DNS records with the current IP address
+  # Cloudflare DDNS: Updates Cloudflare DNS records for VPN access
   cloudflare-ddns:
     container_name: cloudflare-ddns
     image: oznu/cloudflare-ddns:latest
@@ -7,8 +7,20 @@ services:
     environment:
       - API_KEY=${API_KEY}
       - ZONE=${ZONE}
-      - PROXIED=true
+      - SUBDOMAIN=${SUBDOMAIN}
+      - PROXIED=false
       - TZ=${TZ}
+
+  # Cloudflared: Cloudflare Tunnel to expose local services securely without opening ports
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - proxy
 
   # WireGuard: VPN server
   wireguard:

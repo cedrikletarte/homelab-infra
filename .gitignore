@@ -10,3 +10,4 @@ middlewares.yml
 
 # -- Folder --
 stacks-unused
+cloudflare
