@@ -1,0 +1,73 @@
+# Read the documentation before using the `docker-compose.yml` file:
+# https://docs.searxng.org/admin/installation-docker.html
+
+name: searxng
+
+services:
+  # Gluetun: VPN client so outbound engine requests don't expose the server's IP
+  gluetun:
+    container_name: searxng-gluetun
+    image: qmcgaw/gluetun:latest
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - WIREGUARD_CONFIG_FILE=/gluetun/wireguard/wg0.conf
+    volumes:
+      - gluetun-data:/gluetun
+      - ./gluetun/wg0.conf:/gluetun/wireguard/wg0.conf:ro
+    ports:
+      - ${SEARXNG_HOST:+${SEARXNG_HOST}:}${SEARXNG_PORT:-8080}:${SEARXNG_PORT:-8080}
+    restart: always
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.searxng.rule=Host(`searxng.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.searxng.entrypoints=websecure"
+      - "traefik.http.routers.searxng.tls=true"
+      - "traefik.http.routers.searxng.tls.certresolver=letsencrypt"
+      - "traefik.http.services.searxng.loadbalancer.server.port=${SEARXNG_PORT:-8080}"
+      - "traefik.http.routers.searxng.middlewares=crowdsec@file"
+
+  core:
+    container_name: searxng-core
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: always
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    env_file: ./.env
+    volumes:
+      - ./core-config/:/etc/searxng/:Z
+      - core-data:/var/cache/searxng/
+
+  valkey:
+    container_name: searxng-valkey
+    image: docker.io/valkey/valkey:9-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: always
+    volumes:
+      - valkey-data:/data/
+
+volumes:
+  core-data:
+  valkey-data:
+  gluetun-data:
+
+networks:
+  default:
+  proxy:
+    external: true

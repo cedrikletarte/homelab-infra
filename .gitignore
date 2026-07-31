@@ -8,6 +8,9 @@ wg0.conf
 traefik.yml
 middlewares.yml
 
+# -- SearXNG --
+settings.yml
+
 # -- Folder --
 stacks-unused
 cloudflare
