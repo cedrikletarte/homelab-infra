@@ -27,8 +27,24 @@ Personal Docker-based homelab managed with `docker compose`, using Traefik as a 
 ├── infrastructure/   # Core network infrastructure
 │   └── network/      # Traefik, CrowdSec, Cloudflare
 ├── dockerfiles/      # Custom Docker images
-└── deployments/      # CI/CD deployment configs
+├── deployments/      # CI/CD deployment configs
+└── scripts/          # Maintenance & monitoring scripts
 ```
+
+---
+
+## Scripts
+
+Maintenance and monitoring scripts, each with its own README (setup, config, cron usage):
+
+| Script | Purpose |
+|---|---|
+| [`scripts/docker-backup`](scripts/docker-backup/README.md) | Encrypted backup of the homelab (config + Docker volumes) to OneDrive |
+| [`scripts/docker-pull-and-run`](scripts/docker-pull-and-run/README.md) | Pull latest images for every stack and restart the ones that changed |
+| [`scripts/docker-unhealty-monitor`](scripts/docker-unhealty-monitor/README.md) | Detect unhealthy/stopped containers and auto-restart them |
+| [`scripts/disk-health-check`](scripts/disk-health-check/README.md) | SMART health check on all physical disks |
+
+All scripts report status via an n8n webhook (Discord notification + PostgreSQL log).
 
 ---
 
