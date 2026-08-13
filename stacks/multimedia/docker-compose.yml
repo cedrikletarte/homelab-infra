@@ -79,7 +79,6 @@ services:
       #- OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
       #- OPENVPN_PROTOCOL=${OPENVPN_PROTOCOL}
       #- SERVER_REGIONS=${SERVER_REGIONS}
-      #- PORT_FORWARD_ONLY=${PORT_FORWARD_ONLY}
       #- VPN_PORT_FORWARDING=${VPN_PORT_FORWARDING}
       #- PRIVATE_INTERNET_ACCESS_OPENVPN_ENCRYPTION_PRESET=${PRIVATE_INTERNET_ACCESS_OPENVPN_ENCRYPTION_PRESET}
       #- VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh /gluetun/scripts/portforward-up.sh {{PORT}} {{VPN_INTERFACE}}
@@ -88,7 +87,7 @@ services:
       ## WIREGUARD CONFIG ##
       - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=wireguard
-      - SERVER_NAMES=toronto405
+      - SERVER_NAMES=${SERVER_NAMES} # Check gluetun logs, it will tell you the server name to use for your region based on the wg0.conf file you provide
       - WIREGUARD_CONFIG_FILE=/gluetun/wireguard/wg0.conf
       - LOG_LEVEL=info
       # Port forwarding PIA
