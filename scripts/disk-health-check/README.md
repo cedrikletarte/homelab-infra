@@ -15,12 +15,18 @@ For each disk found by `lsblk`, the script:
 - `lsblk`, `jq`, `curl`
 - Run as a user with permission to query disks (typically root)
 
-## Configuration (variables at the top of the script)
+## Configuration
+
+```bash
+cp .env.exemple .env
+```
 
 | Variable | Purpose |
 |---|---|
 | `WEBHOOK_URL` | n8n endpoint for notifications |
 | `SMARTCTL` | Path to the `smartctl` binary |
+
+`.env` is gitignored — only `.env.exemple` is committed.
 
 ## Running the script
 

@@ -1,11 +1,14 @@
 #!/bin/bash
 echo "===== Script SMART START : $(date '+%Y-%m-%d %H:%M:%S') ====="
 
-WEBHOOK_URL="http://localhost:5678/webhook/homelab-alerts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
+
 HOSTNAME=$(hostname)
 ALERTS=""
 LOGS=""
-SMARTCTL="/usr/sbin/smartctl"
 
 DISKS=$(lsblk -ndo NAME,TYPE | awk '$2=="disk"{print "/dev/"$1}')
 

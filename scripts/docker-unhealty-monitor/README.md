@@ -15,12 +15,18 @@ Replaces the (SSH-based) n8n workflow "docker unhealthy monitoring". Meant to ru
 
 - `docker` (with the `compose` plugin), `jq`, `curl`
 
-## Configuration (variables at the top of the script)
+## Configuration
+
+```bash
+cp .env.exemple .env
+```
 
 | Variable | Purpose |
 |---|---|
 | `WEBHOOK_URL` | n8n endpoint for notifications |
 | `HOMELAB_STACKS` | Root folder containing the stack subdirectories (`homelab-infra/stacks`) |
+
+`.env` is gitignored — only `.env.exemple` is committed.
 
 ## Running the script
 

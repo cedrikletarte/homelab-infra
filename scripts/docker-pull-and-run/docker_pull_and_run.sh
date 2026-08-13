@@ -8,9 +8,12 @@
 echo "===== Script docker auto-update START : $(date '+%Y-%m-%d %H:%M:%S') ====="
 
 # ─── Config ──────────────────────────────────────────────────────────────────
-WEBHOOK_URL="http://localhost:5678/webhook/homelab-alerts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
+
 HOSTNAME=$(hostname)
-BASE_DIR="/home/cedrik/homelab-infra/stacks"
 UPDATED=""
 ERRORS=""
 PRUNED=""

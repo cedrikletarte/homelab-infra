@@ -11,20 +11,19 @@
 echo "===== Script docker backup START : $(date '+%Y-%m-%d %H:%M:%S') ====="
 
 # ─── Config ──────────────────────────────────────────────────────────────────
-WEBHOOK_URL="http://localhost:5678/webhook/homelab-alerts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
+
 HOSTNAME=$(hostname)
-HOMELAB_DIR="/home/cedrik/homelab-infra"
-BACKUP_TMP="/mnt/sdb1/backup/tmp"
 DATE_FOLDER=$(date '+%Y-%m-%d')                        # day folder: 2026-05-22
 DATE_TAG=$(date '+%Y-%m-%d_%H-%M')                     # precise timestamp for archive
 ARCHIVE_NAME="volumes_backup_${DATE_TAG}.tar.gz"
 ARCHIVE_PATH="$BACKUP_TMP/$ARCHIVE_NAME"
 # cryptdrive: is an rclone "crypt" remote wrapping onedrive:Server Backup Encrypted
 # it encrypts content + file/folder names before upload (see setup in rclone.conf)
-ONEDRIVE_BASE="cryptdrive:"
 ONEDRIVE_DEST="$ONEDRIVE_BASE/$DATE_FOLDER"            # onedrive:Server Backup/2026-05-22
-DOCKER_VOLUMES_DIR="/var/lib/docker/volumes"
-RCLONE_CONFIG="/home/cedrik/.config/rclone/rclone.conf"
 
 ERRORS=""
 LOGS=""

@@ -15,7 +15,11 @@ Automated backup script for the homelab infrastructure (`homelab-infra/`):
 - An existing OneDrive rclone remote (`onedrive:`)
 - A `crypt` rclone remote (`cryptdrive:`) wrapping `onedrive:Server Backup Encrypted` — see setup below
 
-## Configuration (variables at the top of the script)
+## Configuration
+
+```bash
+cp .env.exemple .env
+```
 
 | Variable | Purpose |
 |---|---|
@@ -25,6 +29,8 @@ Automated backup script for the homelab infrastructure (`homelab-infra/`):
 | `ONEDRIVE_BASE` | Target rclone remote (`cryptdrive:`) |
 | `DOCKER_VOLUMES_DIR` | Docker volumes folder to archive |
 | `RCLONE_CONFIG` | Path to the `rclone.conf` used |
+
+`.env` is gitignored — only `.env.exemple` is committed.
 
 ## Encryption — how it works
 

@@ -12,12 +12,18 @@ Scans every stack under `homelab-infra/stacks`, pulls the latest images, and res
 
 - `docker` (with the `compose` plugin), `jq`, `curl`
 
-## Configuration (variables at the top of the script)
+## Configuration
+
+```bash
+cp .env.exemple .env
+```
 
 | Variable | Purpose |
 |---|---|
 | `WEBHOOK_URL` | n8n endpoint for notifications |
 | `BASE_DIR` | Root folder containing the stack subdirectories (`homelab-infra/stacks`) |
+
+`.env` is gitignored — only `.env.exemple` is committed.
 
 ## Running the script
 

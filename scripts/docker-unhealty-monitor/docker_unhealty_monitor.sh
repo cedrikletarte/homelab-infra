@@ -6,9 +6,12 @@
 #   */5 * * * * /home/cedrik/scripts/docker_unhealthy_monitor.sh
 # =============================================================================
 
-WEBHOOK_URL="http://localhost:5678/webhook/homelab-alerts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
+
 HOSTNAME=$(hostname)
-HOMELAB_STACKS="/home/cedrik/homelab-infra/stacks"
 
 ALERTS=""
 LOGS=""
