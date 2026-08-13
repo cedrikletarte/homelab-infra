@@ -8,12 +8,13 @@ Personal Docker-based homelab managed with `docker compose`, using Traefik as a 
 
 | Stack | Services |
 |---|---|
-| `infrastructure/network` | Traefik, CrowdSec, Cloudflare DDNS, Cloudflared, WireGuard |
-| `stacks/management` | Portainer, Homarr, n8n, Nginx Proxy Manager, Vaultwarden |
-| `stacks/database` | PostgreSQL, Redis |
-| `stacks/multimedia` | Plex, Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, Gluetun, FlareSolverr, Seerr |
+| `infrastructure/network` | Cloudflare DDNS, Cloudflared, CrowdSec, Traefik, WireGuard |
+| `stacks/management` | Homarr, n8n, Portainer, Vaultwarden |
+| `stacks/database` | PostgreSQL |
+| `stacks/multimedia` | FlareSolverr, Gluetun, Lidarr, Plex, Prowlarr, qBittorrent, Radarr, Seerr, Sonarr |
 | `stacks/immich` | Immich |
 | `stacks/gitlab` | GitLab EE, GitLab Runner |
+| `stacks/searxng` | Gluetun, SearXNG, Valkey |
 
 ---
 

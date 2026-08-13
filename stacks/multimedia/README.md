@@ -103,7 +103,7 @@ toronto405
 
 ## 🔁 7. Update SERVER_NAMES
 
-In `docker-compose.yml`:
+In `.env`:
 
 ```yaml
 - SERVER_NAMES=toronto405
