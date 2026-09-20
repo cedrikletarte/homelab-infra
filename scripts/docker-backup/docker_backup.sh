@@ -17,6 +17,8 @@ source "$SCRIPT_DIR/.env"
 set +a
 
 HOSTNAME=$(hostname)
+# Timestamp of the last fully successful backup, read by docker_pull_and_run.sh
+BACKUP_MARKER="${BACKUP_MARKER:-/var/lib/docker-backup/last_success}"
 DATE_FOLDER=$(date '+%Y-%m-%d')                        # day folder: 2026-05-22
 DATE_TAG=$(date '+%Y-%m-%d_%H-%M')                     # precise timestamp for archive
 # cryptdrive: is an rclone "crypt" remote wrapping onedrive:Server Backup Encrypted
@@ -279,6 +281,7 @@ if [[ -n "$ERRORS" ]]; then
 else
     MESSAGE+="✅ Backup completed without errors\n"
     STATUS="ok"
+    mkdir -p "$(dirname "$BACKUP_MARKER")" && date +%s > "$BACKUP_MARKER"
 fi
 
 MESSAGE+="🕐 $(date '+%Y-%m-%d %H:%M:%S')"

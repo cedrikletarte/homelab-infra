@@ -19,3 +19,6 @@ docs
 # -- Claude --
 CLAUDE.md
 CONTEXT.md
+
+# -- CrowdSec --
+**/crowdsec/notifications/http.yaml

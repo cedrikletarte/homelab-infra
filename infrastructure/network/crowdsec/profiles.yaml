@@ -1,0 +1,20 @@
+# Default CrowdSec profiles (ban for 4h), plus a notification to n8n on every local alert.
+name: default_ip_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+ - type: ban
+   duration: 4h
+notifications:
+  - http_n8n
+on_success: break
+---
+name: default_range_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+ - type: ban
+   duration: 4h
+notifications:
+  - http_n8n
+on_success: break

@@ -133,6 +133,10 @@ rclone lsd cryptdrive: # list all folders
 rclone copy cryptdrive:2026-08-23 ~/Desktop/homelab --progress # decrypt and copy folder to local machine
 ```
 
+## Success marker
+
+After a backup with no error, the script writes the current timestamp to `BACKUP_MARKER` (`/var/lib/docker-backup/last_success` by default). `docker_pull_and_run.sh` reads it and refuses to update images unless a backup succeeded recently, so an update never runs without a fresh backup behind it.
+
 ## Error handling
 
 The script keeps going as much as possible even on partial failure (e.g. a stack that fails to restart), accumulates errors in `$ERRORS`, and the final status (`ok` / `error`) is reflected in the Discord notification — always check the message after each scheduled run.

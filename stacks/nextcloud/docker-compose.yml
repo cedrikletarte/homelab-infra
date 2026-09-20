@@ -20,7 +20,7 @@ services:
     ports:
       # AIO admin/setup interface (self-signed cert) - kept off Traefik on purpose,
       # host port 8080 is already taken by qBittorrent so it's remapped to 18080.
-      - "18080:8080"
+      - "192.168.2.120:18080:8080"
     volumes:
       - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
       - /var/run/docker.sock:/var/run/docker.sock:ro

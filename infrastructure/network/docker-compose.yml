@@ -2,13 +2,19 @@ services:
   # Cloudflare DDNS: Updates Cloudflare DNS records for VPN access
   cloudflare-ddns:
     container_name: cloudflare-ddns
-    image: oznu/cloudflare-ddns:latest
+    image: favonia/cloudflare-ddns:latest
     restart: always
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
-      - API_KEY=${API_KEY}
-      - ZONE=${ZONE}
-      - SUBDOMAIN=${SUBDOMAIN}
-      - PROXIED=false
+      - CLOUDFLARE_API_TOKEN=${API_KEY}
+      - DOMAINS=${SUBDOMAIN}.${ZONE}
+      - PROXIED=false # WireGuard is UDP, Cloudflare can't proxy it
+      - IP6_PROVIDER=none # no global IPv6 on the server
       - TZ=${TZ}
 
   # Cloudflared: Cloudflare Tunnel to expose local services securely without opening ports
@@ -86,6 +92,8 @@ services:
       - ./crowdsec/acquis.d/appsec.yaml:/etc/crowdsec/acquis.d/appsec.yaml
       - ./crowdsec/acquis.d/traefik.yaml:/etc/crowdsec/acquis.d/traefik.yaml:ro
       - ./crowdsec/acquis.d/ssh.yaml:/etc/crowdsec/acquis.d/ssh.yaml:ro
+      - ./crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
+      - ./crowdsec/notifications/http.yaml:/etc/crowdsec/notifications/http.yaml:ro
       - /var/log:/var/log:ro
       - traefik-logs:/traefik-logs:ro
     networks:
@@ -111,5 +119,15 @@ volumes:
     name: traefik-logs
 
 networks:
+  # Subnets are pinned because they are referenced elsewhere: Traefik forwardedHeaders.trustedIPs and
+  # the CrowdSec bouncer, Vaultwarden, Nextcloud, login-ratelimit (proxy), host ufw rules for SSH/Samba/Webmin (default).
+  # See docs/adr/0007.
   proxy:
-    name: proxy 
+    name: proxy
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16

@@ -40,6 +40,14 @@ services:
       - "traefik.http.routers.immich.tls.certresolver=letsencrypt"
       - "traefik.http.services.immich.loadbalancer.server.port=2283"
       - "traefik.http.routers.immich.middlewares=crowdsec@file"
+      # Login endpoint only: same service, plus a per-IP rate limit (Immich has none of its own)
+      - "traefik.http.routers.immich-login.rule=Host(`immich.${PRIMARY_DOMAIN}`) && Path(`/api/auth/login`) && Method(`POST`)"
+      - "traefik.http.routers.immich-login.priority=100"
+      - "traefik.http.routers.immich-login.entrypoints=websecure"
+      - "traefik.http.routers.immich-login.tls=true"
+      - "traefik.http.routers.immich-login.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.immich-login.service=immich"
+      - "traefik.http.routers.immich-login.middlewares=crowdsec@file,login-ratelimit@file"
 
 
   immich-machine-learning:

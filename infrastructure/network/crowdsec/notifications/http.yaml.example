@@ -1,0 +1,27 @@
+# Sends CrowdSec alerts to an n8n webhook (a workflow that journals them and posts to Discord).
+# Copy to http.yaml (gitignored) and set the real URL: the webhook has no authentication, so its
+# path is the only protection and must not be committed.
+# n8n is not on the proxy network, so it is reached through the host's published port.
+type: http
+name: http_n8n
+log_level: info
+
+# Alerts are batched: one message per 5 minutes, or sooner once 10 alerts have piled up.
+group_wait: 5m
+group_threshold: 10
+max_retry: 3
+timeout: 20s
+
+url: http://<server-lan-ip>:5678/webhook/<webhook-path>
+method: POST
+headers:
+  Content-Type: application/json
+
+# `.` is the list of alerts of the batch. Discord truncates at 2000 characters, hence at most 10 lines.
+format: |
+  {
+    "source": "crowdsec",
+    "status": "warning",
+    "content": "🛡️ **CrowdSec — {{ len . }} alerte(s)**\n{{ range $i, $a := . }}{{ if lt $i 10 }}• `{{ $a.Source.Value }}`{{ if $a.Source.Cn }} ({{ $a.Source.Cn }}){{ end }} — {{ $a.Scenario }}\n{{ end }}{{ end }}{{ if gt (len .) 10 }}… et {{ sub (len .) 10 }} de plus\n{{ end }}",
+    "logs": "{{ range . }}{{ .StartAt }} {{ .Source.Value }} {{ .Scenario }}\n{{ end }}"
+  }

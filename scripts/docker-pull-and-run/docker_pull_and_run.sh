@@ -2,7 +2,11 @@
 # =============================================================================
 # docker_pull_and_run.sh — Auto-update Docker images
 # Pulls latest images for every stack under homelab-infra/stacks and
-# restarts stacks whose images changed
+# restarts stacks whose images changed.
+# - Refuses to run unless docker_backup.sh succeeded recently (--force bypasses)
+# - Skips stacks listed in SKIP_STACKS (e.g. Nextcloud AIO updates itself)
+# - Reports the previous image digest of every updated image, to allow a rollback
+#   with `image: name@sha256:...`
 # =============================================================================
 
 echo "===== Script docker auto-update START : $(date '+%Y-%m-%d %H:%M:%S') ====="
@@ -13,14 +17,39 @@ set -a
 source "$SCRIPT_DIR/.env"
 set +a
 
+# Optional settings (defaults apply when absent from .env)
+BACKUP_MARKER="${BACKUP_MARKER:-/var/lib/docker-backup/last_success}"   # written by docker_backup.sh
+BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-180}"                     # weekly backup (Sun 03:00) vs daily update (02:00): 7 days + margin
+SKIP_STACKS="${SKIP_STACKS:-nextcloud}"                                 # space-separated stack names
+
+FORCE=0
+[[ "${1:-}" == "--force" ]] && FORCE=1
+
 HOSTNAME=$(hostname)
 UPDATED=""
 ERRORS=""
 PRUNED=""
 LOGS=""
 
+# Local digest of an image (repo@sha256:...), empty if the image has none
+image_digest() {
+    docker image inspect "$1" --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' 2>/dev/null
+}
+
+# ─── Require a recent successful backup ──────────────────────────────────────
+BLOCKED=0
+if [[ $FORCE -ne 1 ]]; then
+    LAST_BACKUP=$(cat "$BACKUP_MARKER" 2>/dev/null)
+    if [[ ! "$LAST_BACKUP" =~ ^[0-9]+$ ]] || (( $(date +%s) - LAST_BACKUP > BACKUP_MAX_AGE_HOURS * 3600 )); then
+        BLOCKED=1
+        ERRORS+="• **Updates skipped** — no successful backup in the last ${BACKUP_MAX_AGE_HOURS}h (\`--force\` to bypass)\n"
+        echo "ERROR: no successful backup in the last ${BACKUP_MAX_AGE_HOURS}h, updates skipped"
+    fi
+fi
+
 # ─── Scan all stacks ──────────────────────────────────────────────────────────
 for dir in "$BASE_DIR"/*/; do
+    [[ $BLOCKED -eq 1 ]] && break
     STACK=$(basename "$dir")
 
     # Skip archived directories (starting with _)
@@ -29,10 +58,23 @@ for dir in "$BASE_DIR"/*/; do
         continue
     fi
 
+    # Skip stacks that manage their own updates
+    if [[ " $SKIP_STACKS " == *" $STACK "* ]]; then
+        echo "Skipping excluded stack: $STACK"
+        LOGS+="=== skipped : $STACK (SKIP_STACKS) ===\n\n"
+        continue
+    fi
+
     COMPOSE_FILE="$dir/docker-compose.yml"
     if [[ -f "$COMPOSE_FILE" ]]; then
         echo "Checking $STACK"
         cd "$dir" || continue
+
+        # Remember the current digest of each image, to report it if it changes
+        declare -A OLD_DIGEST=()
+        for img in $(docker compose config --images 2>/dev/null); do
+            OLD_DIGEST["$img"]=$(image_digest "$img")
+        done
 
         # Pull images and capture output
         PULL_OUTPUT=$(docker compose pull 2>&1)
@@ -62,11 +104,19 @@ for dir in "$BASE_DIR"/*/; do
                 echo "ERROR: restart failed for $STACK"
                 echo "$UP_OUTPUT"
             else
-                IMAGES=$(docker compose config | awk '/image:/ {print $2}')
-                UPDATED+="• **$STACK**\n"
-                for img in $IMAGES; do
-                    UPDATED+="  ↳ \`$img\`\n"
+                CHANGED=""
+                for img in "${!OLD_DIGEST[@]}"; do
+                    NEW_DIGEST=$(image_digest "$img")
+                    [[ "$NEW_DIGEST" == "${OLD_DIGEST[$img]}" ]] && continue
+                    CHANGED+="  ↳ \`$img\`\n"
+                    if [[ -n "${OLD_DIGEST[$img]}" ]]; then
+                        CHANGED+="     ↩ rollback : \`${OLD_DIGEST[$img]}\`\n"
+                    else
+                        CHANGED+="     ↩ no previous local image\n"
+                    fi
+                    LOGS+="digest $STACK $img : ${OLD_DIGEST[$img]:-none} -> ${NEW_DIGEST:-none}\n"
                 done
+                [[ -n "$CHANGED" ]] && UPDATED+="• **$STACK**\n$CHANGED"
             fi
         fi
     fi

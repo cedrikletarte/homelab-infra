@@ -9,7 +9,8 @@ services:
     environment:
       - LOG_FILE=/data/vaultwarden.log
       - LOG_LEVEL=warn  # Or 'info' for more detailed logs
-      - TRUSTED_PROXIES=0.0.0.0/0
+      - IP_HEADER=CF-Connecting-IP # real client IP, always overwritten by Cloudflare (X-Forwarded-For is client-controllable)
+      - IP_HEADER_TRUSTED_PROXIES=172.19.0.0/16 # only trust that header when it comes from the proxy network
       # - ADMIN_TOKEN=${ADMIN_TOKEN} # activate/deactivate the admin web page
       - SIGNUPS_ALLOWED=false # disable user registration
     restart: always
@@ -32,7 +33,7 @@ services:
       - homarr_appdata:/appdata
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - '7575:7575'
+      - '192.168.2.120:7575:7575'
     restart: always
     environment:
       - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_ENCRYPTION_KEY}
@@ -47,7 +48,7 @@ services:
       - portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - 9000:9000
+      - 192.168.2.120:9000:9000
     restart: always
 
   # n8n: Workflow automation tool
@@ -56,12 +57,14 @@ services:
     image: docker.n8n.io/n8nio/n8n
     restart: unless-stopped
     ports:
-      - 5678:5678
+      - 192.168.2.120:5678:5678
+      - 127.0.0.1:5678:5678
     environment:
       - GENERIC_TIMEZONE=${TZ}
       - TZ=${TZ}
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - N8N_RUNNERS_ENABLED=true
+      - N8N_SECURE_COOKIE=false
       - NODES_EXCLUDE=[]
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DATABASE}
@@ -75,15 +78,6 @@ services:
       - n8n_data:/home/node/.n8n
     networks:
       - db_network
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.${PRIMARY_DOMAIN}`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls=true"
-      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-      - "traefik.http.routers.n8n.middlewares=crowdsec@file"
 
 
 volumes:

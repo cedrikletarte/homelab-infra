@@ -24,3 +24,15 @@ http:
         middlewares:
           - nextcloud-secure-headers
           - crowdsec
+
+    # Longer window than Cloudflare's free rate limit (10 s), applied on login endpoints only.
+    # Keyed on the real client IP: the rightmost X-Forwarded-For entry that is not the proxy network.
+    login-ratelimit:
+      rateLimit:
+        average: 10
+        period: 1m
+        burst: 5
+        sourceCriterion:
+          ipStrategy:
+            excludedIPs:
+              - 172.19.0.0/16
