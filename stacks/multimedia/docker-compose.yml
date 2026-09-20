@@ -57,8 +57,6 @@ services:
       - TZ=${TZ}
     volumes:
       - flaresolverr:/config
-    ports:
-      - "8191:8191"
     restart: unless-stopped
     networks:
       - internal

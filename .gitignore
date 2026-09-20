@@ -14,3 +14,8 @@ settings.yml
 # -- Folder --
 stacks-unused
 cloudflare
+docs
+
+# -- Claude --
+CLAUDE.md
+CONTEXT.md

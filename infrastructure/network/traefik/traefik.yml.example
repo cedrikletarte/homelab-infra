@@ -7,6 +7,7 @@ entryPoints:
     address: ":80"
     forwardedHeaders:
       trustedIPs:
+        - 172.19.0.0/16 # proxy network: cloudflared connects from here (tunnel)
         - 103.21.244.0/22
         - 103.22.200.0/22
         - 103.31.4.0/22
@@ -32,6 +33,7 @@ entryPoints:
     address: ":443"
     forwardedHeaders:
       trustedIPs:
+        - 172.19.0.0/16 # proxy network: cloudflared connects from here (tunnel)
         - 103.21.244.0/22
         - 103.22.200.0/22
         - 103.31.4.0/22
@@ -71,6 +73,7 @@ log:
   format: json
 
 accessLog:
+  filePath: /var/log/traefik/access.log # read by CrowdSec
   format: json
 
 certificatesResolvers:

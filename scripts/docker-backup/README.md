@@ -3,8 +3,8 @@
 Automated backup script for the homelab infrastructure (`homelab-infra/`):
 
 1. Stops active Docker stacks (recursive scan of `homelab-infra/stacks` and `homelab-infra/infrastructure`)
-2. Compresses `/var/lib/docker/volumes` into a `.tar.gz`
-3. Copies `homelab-infra/` + the archive to OneDrive, **encrypted**, via an `rclone crypt` remote
+2. Compresses each backup directory (`/var/lib/docker/volumes`, `/mnt/sdb1/immich`, `/mnt/sdb1/nextcloud`) into its own `.tar.gz`
+3. Copies `homelab-infra/` + the archives to OneDrive, **encrypted**, via an `rclone crypt` remote
 4. Restarts the stacks
 5. Rotates OneDrive backups (keeps the last 7)
 6. Reports the result via an n8n webhook (Discord + PostgreSQL log)
@@ -28,9 +28,13 @@ cp .env.exemple .env
 | `BACKUP_TMP` | Local temp folder for the archive before upload |
 | `ONEDRIVE_BASE` | Target rclone remote (`cryptdrive:`) |
 | `DOCKER_VOLUMES_DIR` | Docker volumes folder to archive |
+| `IMMICH_DIR` | Immich data folder to archive |
+| `NEXTCLOUD_DIR` | Nextcloud data folder to archive |
 | `RCLONE_CONFIG` | Path to the `rclone.conf` used |
 
 `.env` is gitignored — only `.env.exemple` is committed.
+
+The full list of directories archived (one `.tar.gz` per directory) is `BACKUP_DIRS` in `docker_backup.sh`: `$DOCKER_VOLUMES_DIR`, `$IMMICH_DIR`, `$NEXTCLOUD_DIR`. Add more by adding a variable to `.env`/`.env.exemple` and referencing it in that array.
 
 ## Encryption — how it works
 
@@ -125,7 +129,8 @@ rclone copy cryptdrive:2026-08-13/homelab-infra /path/to/restore --progress
 ```powershell
 winget install Rclone.Rclone
 rclone config file    # locates the expected rclone.conf (%APPDATA%\rclone\rclone.conf)
-rclone copy cryptdrive:2026-08-13/homelab-infra C:\restore --progress
+rclone lsd cryptdrive: # list all folders
+rclone copy cryptdrive:2026-08-23 ~/Desktop/homelab --progress # decrypt and copy folder to local machine
 ```
 
 ## Error handling

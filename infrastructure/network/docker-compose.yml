@@ -60,12 +60,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8181:8080"
+      - "192.168.2.120:8181:8080" # dashboard: LAN IP only, not all interfaces
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
       - traefik-acme:/etc/traefik/acme
+      - traefik-logs:/var/log/traefik
     depends_on:
       - crowdsec
     networks:
@@ -76,14 +77,17 @@ services:
     container_name: crowdsec
     restart: unless-stopped
     environment:
-      - COLLECTIONS=crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      - COLLECTIONS=crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules crowdsecurity/traefik crowdsecurity/base-http-scenarios crowdsecurity/http-cve
       - GID=${CROWDSEC_PGID}
       - TZ=${TZ}
     volumes:
       - crowdsec-db:/var/lib/crowdsec/data/
       - crowdsec-config:/etc/crowdsec/
       - ./crowdsec/acquis.d/appsec.yaml:/etc/crowdsec/acquis.d/appsec.yaml
+      - ./crowdsec/acquis.d/traefik.yaml:/etc/crowdsec/acquis.d/traefik.yaml:ro
+      - ./crowdsec/acquis.d/ssh.yaml:/etc/crowdsec/acquis.d/ssh.yaml:ro
       - /var/log:/var/log:ro
+      - traefik-logs:/traefik-logs:ro
     networks:
       - proxy
 
@@ -103,6 +107,8 @@ volumes:
   traefik-acme:
     name: traefik-acme
     external: true
+  traefik-logs:
+    name: traefik-logs
 
 networks:
   proxy:

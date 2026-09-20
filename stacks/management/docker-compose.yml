@@ -47,7 +47,6 @@ services:
       - portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - 8000:8000
       - 9000:9000
     restart: always
 

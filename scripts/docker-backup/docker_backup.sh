@@ -2,8 +2,8 @@
 # =============================================================================
 # docker_backup.sh — Backup homelab to OneDrive
 # - Stop active containers (recursive scan of homelab-infra/)
-# - Compress Docker volumes
-# - Copy homelab-infra + archive to OneDrive
+# - Compress Docker volumes + /mnt/sdb1/immich + /mnt/sdb1/nextcloud
+# - Copy homelab-infra + archives to OneDrive
 # - Restart containers
 # - Notify via n8n webhook (Discord + PostgreSQL log)
 # =============================================================================
@@ -19,16 +19,23 @@ set +a
 HOSTNAME=$(hostname)
 DATE_FOLDER=$(date '+%Y-%m-%d')                        # day folder: 2026-05-22
 DATE_TAG=$(date '+%Y-%m-%d_%H-%M')                     # precise timestamp for archive
-ARCHIVE_NAME="volumes_backup_${DATE_TAG}.tar.gz"
-ARCHIVE_PATH="$BACKUP_TMP/$ARCHIVE_NAME"
 # cryptdrive: is an rclone "crypt" remote wrapping onedrive:Server Backup Encrypted
 # it encrypts content + file/folder names before upload (see setup in rclone.conf)
 ONEDRIVE_DEST="$ONEDRIVE_BASE/$DATE_FOLDER"            # onedrive:Server Backup/2026-05-22
+
+# Directories to compress into individual archives (name derived from basename)
+BACKUP_DIRS=(
+    "$DOCKER_VOLUMES_DIR"
+    "$IMMICH_DIR"
+    "$NEXTCLOUD_DIR"
+)
 
 ERRORS=""
 LOGS=""
 STOPPED_STACK_NAMES=()
 STARTED_STACK_NAMES=()
+ARCHIVE_PATHS=()
+ARCHIVE_SUMMARY=""
 
 # Directories to scan (deployments excluded — managed by GitLab CI)
 COMPOSE_SCAN_DIRS=(
@@ -117,29 +124,38 @@ echo ">>> Step 1/5 — Stopping containers..."
 run_compose_action "down" "Stopping"
 echo "  Stacks stopped: ${#STOPPED_STACK_NAMES[@]}"
 
-# ─── Step 2: Compress Docker volumes ─────────────────────────────────────────
+# ─── Step 2: Compress backup directories ─────────────────────────────────────
 echo ""
-echo ">>> Step 2/5 — Compressing Docker volumes..."
+echo ">>> Step 2/5 — Compressing backup directories..."
 
-if [[ ! -d "$DOCKER_VOLUMES_DIR" ]]; then
-    ERRORS+="• **volumes** — directory $DOCKER_VOLUMES_DIR not found\n"
-    LOGS+="=== tar ===\nERROR: $DOCKER_VOLUMES_DIR not found\n\n"
-    echo "ERROR: $DOCKER_VOLUMES_DIR not found"
-else
-    echo "  Compressing $DOCKER_VOLUMES_DIR → $ARCHIVE_PATH"
+for SRC_DIR in "${BACKUP_DIRS[@]}"; do
+    DIR_LABEL=$(basename "$SRC_DIR")
+    ARCHIVE_NAME="${DIR_LABEL}_backup_${DATE_TAG}.tar.gz"
+    ARCHIVE_PATH="$BACKUP_TMP/$ARCHIVE_NAME"
+
+    if [[ ! -d "$SRC_DIR" ]]; then
+        ERRORS+="• **$DIR_LABEL** — directory $SRC_DIR not found\n"
+        LOGS+="=== tar ($DIR_LABEL) ===\nERROR: $SRC_DIR not found\n\n"
+        echo "ERROR: $SRC_DIR not found"
+        continue
+    fi
+
+    echo "  Compressing $SRC_DIR → $ARCHIVE_PATH"
     TAR_OUTPUT=$(tar -czf "$ARCHIVE_PATH" \
-        -C "$(dirname "$DOCKER_VOLUMES_DIR")" \
-        "$(basename "$DOCKER_VOLUMES_DIR")" 2>&1)
+        -C "$(dirname "$SRC_DIR")" \
+        "$(basename "$SRC_DIR")" 2>&1)
     TAR_EXIT=$?
-    LOGS+="=== tar ===\n$TAR_OUTPUT\n\n"
+    LOGS+="=== tar ($DIR_LABEL) ===\n$TAR_OUTPUT\n\n"
     if [[ $TAR_EXIT -ne 0 ]]; then
-        ERRORS+="• **volumes** — compression failed: \`$TAR_OUTPUT\`\n"
+        ERRORS+="• **$DIR_LABEL** — compression failed: \`$TAR_OUTPUT\`\n"
         echo "ERROR: tar failed — $TAR_OUTPUT"
     else
         ARCHIVE_SIZE=$(du -sh "$ARCHIVE_PATH" 2>/dev/null | cut -f1)
         echo "  ✓ Archive created: $ARCHIVE_NAME ($ARCHIVE_SIZE)"
+        ARCHIVE_PATHS+=("$ARCHIVE_PATH")
+        ARCHIVE_SUMMARY+="📦 **$DIR_LABEL** : \`$ARCHIVE_NAME\` ($ARCHIVE_SIZE)\n"
     fi
-fi
+done
 
 # ─── Step 3: Restart all stacks ──────────────────────────────────────────────
 echo ""
@@ -168,33 +184,38 @@ else
     echo "  ✓ homelab-infra uploaded"
 fi
 
-# 4b. Copy volumes archive
-if [[ -f "$ARCHIVE_PATH" ]]; then
-    echo "  Copying $ARCHIVE_NAME → $ONEDRIVE_DEST/"
-    RCLONE_OUT=$(rclone --config "$RCLONE_CONFIG" copy "$ARCHIVE_PATH" "$ONEDRIVE_DEST" \
-        --progress \
-        --log-level INFO \
-        2>&1)
-    RCLONE_EXIT=$?
-    LOGS+="=== rclone archive ===\n$RCLONE_OUT\n\n"
-    if [[ $RCLONE_EXIT -ne 0 ]]; then
-        RCLONE_ERRORS+="• **$ARCHIVE_NAME** — rclone copy failed (exit $RCLONE_EXIT)\n"
-        echo "  ERROR: rclone copy archive failed"
-    else
-        echo "  ✓ Volumes archive uploaded"
-    fi
+# 4b. Copy backup archives
+if [[ ${#ARCHIVE_PATHS[@]} -eq 0 ]]; then
+    RCLONE_ERRORS+="• **archives** — no archive was created, upload skipped\n"
+    LOGS+="=== rclone archives ===\nWARNING: no archive to upload\n\n"
+    echo "  WARNING: no archive to upload"
 else
-    RCLONE_ERRORS+="• **archive** — file not found, upload skipped\n"
-    LOGS+="=== rclone archive ===\nWARNING: archive not found, skipping upload\n\n"
-    echo "  WARNING: archive not found, skipping upload"
+    for ARCHIVE_PATH in "${ARCHIVE_PATHS[@]}"; do
+        ARCHIVE_NAME=$(basename "$ARCHIVE_PATH")
+        echo "  Copying $ARCHIVE_NAME → $ONEDRIVE_DEST/"
+        RCLONE_OUT=$(rclone --config "$RCLONE_CONFIG" copy "$ARCHIVE_PATH" "$ONEDRIVE_DEST" \
+            --progress \
+            --log-level INFO \
+            2>&1)
+        RCLONE_EXIT=$?
+        LOGS+="=== rclone archive ($ARCHIVE_NAME) ===\n$RCLONE_OUT\n\n"
+        if [[ $RCLONE_EXIT -ne 0 ]]; then
+            RCLONE_ERRORS+="• **$ARCHIVE_NAME** — rclone copy failed (exit $RCLONE_EXIT)\n"
+            echo "  ERROR: rclone copy archive failed"
+        else
+            echo "  ✓ $ARCHIVE_NAME uploaded"
+        fi
+    done
 fi
 
 ERRORS+="$RCLONE_ERRORS"
 
-# 4c. Clean up local temporary archive
-echo "  Cleaning up local archive..."
-rm -f "$ARCHIVE_PATH"
-echo "  ✓ Local archive deleted"
+# 4c. Clean up local temporary archives
+echo "  Cleaning up local archives..."
+for ARCHIVE_PATH in "${ARCHIVE_PATHS[@]}"; do
+    rm -f "$ARCHIVE_PATH"
+done
+echo "  ✓ Local archives deleted"
 
 # ─── Step 5: Rotate old backups on OneDrive (keep last 7) ────────────────────
 echo ""
@@ -236,13 +257,14 @@ for s in "${STARTED_STACK_NAMES[@]}"; do STARTED_LIST+="  ↳ \`$s\`\n"; done
 MESSAGE="💾 **Docker Backup — $HOSTNAME**\n"
 MESSAGE+="📅 \`$DATE_FOLDER\`\n\n"
 
-if [[ -n "$ARCHIVE_SIZE" ]]; then
-    MESSAGE+="📦 **Volumes archive** : \`$ARCHIVE_NAME\` ($ARCHIVE_SIZE)\n"
+if [[ -n "$ARCHIVE_SUMMARY" ]]; then
+    MESSAGE+="$ARCHIVE_SUMMARY"
 fi
 
 MESSAGE+="☁️ **OneDrive (encrypted)** : \`$ONEDRIVE_DEST/\`\n"
 MESSAGE+="  ↳ \`homelab-infra/\` (full config)\n"
-MESSAGE+="  ↳ \`$ARCHIVE_NAME\`\n\n"
+for p in "${ARCHIVE_PATHS[@]}"; do MESSAGE+="  ↳ \`$(basename "$p")\`\n"; done
+MESSAGE+="\n"
 
 if [[ ${#STOPPED_STACK_NAMES[@]} -gt 0 ]]; then
     MESSAGE+="⏹ **Stacks stopped** (${#STOPPED_STACK_NAMES[@]}) :\n$STOPPED_LIST\n"

@@ -4,6 +4,8 @@ http:
       plugin:
         bouncer:
           enabled: true
+          forwardedHeadersTrustedIPs:
+            - 172.19.0.0/16
           crowdsecLapiKey: "${CROWDSEC_LAPI_KEY}"
           crowdsecAppsecEnabled: true
           crowdsecAppsecHost: "crowdsec:7422"
@@ -21,4 +23,4 @@ http:
       chain:
         middlewares:
           - nextcloud-secure-headers
-          - crowdsec
+          - crowdsec

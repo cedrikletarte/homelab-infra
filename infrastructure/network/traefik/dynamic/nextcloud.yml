@@ -1,0 +1,19 @@
+http:
+  routers:
+    nextcloud:
+      rule: "Host(`nextcloud.cedrikletarte.com`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - nextcloud-chain@file
+      service: nextcloud
+
+  services:
+    nextcloud:
+      loadBalancer:
+        servers:
+          # Container spawned by nextcloud-aio-mastercontainer (APACHE_ADDITIONAL_NETWORK=proxy
+          # joins it to this network, APACHE_PORT=11000 sets the listening port).
+          - url: "http://nextcloud-aio-apache:11000"
