@@ -31,6 +31,12 @@ COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 
+# npm, npx, corepack and yarn are not needed to run `node server.js`. Removing them drops their bundled
+# dependencies (which are the only vulnerabilities Trivy reports on the base image) and a shell-reachable
+# package manager from a container that may get compromised.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 # Do not run as root
 USER node
 
