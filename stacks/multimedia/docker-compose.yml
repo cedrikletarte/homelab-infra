@@ -3,6 +3,13 @@ services:
   # Plex: Media server software
   plex:
     image: plexinc/pms-docker
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: plex
     environment:
       - TZ=${TZ}
@@ -19,6 +26,10 @@ services:
   # Seerr: Media request management and discovery tool
   seerr:
     image: ghcr.io/seerr-team/seerr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     init: true
     container_name: seerr
     environment:
@@ -49,6 +60,10 @@ services:
   # Flaresolverr: Proxy server to bypass Cloudflare protection
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     container_name: flaresolverr
     environment:
       - LOG_LEVEL=info
@@ -115,6 +130,13 @@ services:
   # qBittorrent: BitTorrent client
   qbittorrent:
     image: linuxserver/qbittorrent:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: qbittorrent
     environment:
       - PUID=${MULTIMEDIA_UID}
@@ -135,6 +157,13 @@ services:
   # Radarr: Movie collection manager
   radarr:
     image: lscr.io/linuxserver/radarr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: radarr
     environment:
       - PUID=${MULTIMEDIA_UID}
@@ -154,6 +183,13 @@ services:
   # Sonarr: TV series collection manager
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: sonarr
     environment:
       - PUID=${MULTIMEDIA_UID}
@@ -172,6 +208,13 @@ services:
   # Lidarr: Music collection manager
   lidarr:
     image: lscr.io/linuxserver/lidarr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: lidarr
     environment:
       - PUID=${MULTIMEDIA_UID}
@@ -190,6 +233,13 @@ services:
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
     container_name: prowlarr
     environment:
       - PUID=${MULTIMEDIA_UID}

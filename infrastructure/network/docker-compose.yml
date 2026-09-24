@@ -20,6 +20,11 @@ services:
   # Cloudflared: Cloudflare Tunnel to expose local services securely without opening ports
   cloudflared:
     image: cloudflare/cloudflared:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel --no-autoupdate run
@@ -58,6 +63,10 @@ services:
 
   traefik:
     image: traefik:v3.6
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     container_name: traefik
     restart: unless-stopped
     environment:
@@ -80,6 +89,15 @@ services:
 
   crowdsec:
     image: crowdsecurity/crowdsec:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # SETUID/SETGID: the notification plugin runs under another user; DAC_OVERRIDE: to reach its socket
+    cap_add:
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
     container_name: crowdsec
     restart: unless-stopped
     environment:

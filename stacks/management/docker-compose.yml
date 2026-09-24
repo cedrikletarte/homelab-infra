@@ -4,6 +4,10 @@ services:
   vaultwarden:
     container_name: vaultwarden
     image: vaultwarden/server:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     volumes:
       - vaultwarden:/data/
     environment:
@@ -29,6 +33,16 @@ services:
   homarr:
     container_name: homarr
     image: ghcr.io/homarr-labs/homarr:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     volumes:
       - homarr_appdata:/appdata
       - /var/run/docker.sock:/var/run/docker.sock
@@ -41,6 +55,10 @@ services:
   # Portainer: Docker management UI
   portainer:
     image: portainer/portainer-ce:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     container_name: portainer
     environment:
       - TZ=${TZ}
@@ -55,6 +73,10 @@ services:
   n8n:
     container_name: n8n
     image: docker.n8n.io/n8nio/n8n
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
     ports:
       - 192.168.2.120:5678:5678

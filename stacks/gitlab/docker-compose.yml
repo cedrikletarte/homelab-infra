@@ -5,6 +5,8 @@ services:
     image: gitlab/gitlab-ee:latest
     container_name: gitlab
     restart: always
+    security_opt:
+      - no-new-privileges:true
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url '${EXTERNAL_URL}'
@@ -21,6 +23,12 @@ services:
   # gitlab runner: Pipeline runner for gitlab
   gitlab-runner:
     image: gitlab/gitlab-runner:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
     container_name: gitlab-runner
     restart: always
     volumes:

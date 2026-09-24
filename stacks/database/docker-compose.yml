@@ -4,6 +4,16 @@ services:
   postgres:
     container_name: postgres
     image: postgres:17
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
     restart: unless-stopped
     shm_size: 128mb
     environment:
