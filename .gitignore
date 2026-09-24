@@ -3,6 +3,7 @@
 
 # -- Gluetun --
 wg0.conf
+wg0.conf.bak-*
 
 # -- Traefik --
 traefik.yml
