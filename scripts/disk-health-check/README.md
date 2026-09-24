@@ -45,6 +45,6 @@ Recommended as a cron job, e.g. daily:
 - Always sends a notification (unlike the unhealthy-container monitor, which stays silent when nothing is wrong)
 - `status: "ok"` with "All disks are in good health" when every disk passes
 - `status: "alert"` listing each failing disk when any check fails:
-  - ❌ overall health not `PASSED`
-  - ⚠️ reallocated sectors present
-  - ⚠️ last self-test did not complete without error
+  - overall health not `PASSED`
+  - reallocated sectors present
+  - last self-test did not complete without error

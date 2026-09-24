@@ -61,7 +61,7 @@ rclone config
 - directory_name_encryption: `true`
 - password / password2: type it (`y`) or generate it (`g`) — **write both down immediately in a separate password manager**
 
-⚠️ **Without `password` + `password2`, the backups are unrecoverable — there is no way to reset or recover them.** Keep both values off the server (password manager), and lock down `rclone.conf`:
+**Without `password` + `password2`, the backups are unrecoverable — there is no way to reset or recover them.** Keep both values off the server (password manager), and lock down `rclone.conf`:
 
 ```bash
 chmod 600 /home/cedrik/.config/rclone/rclone.conf
