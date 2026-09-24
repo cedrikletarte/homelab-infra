@@ -1,0 +1,16 @@
+#!/bin/sh
+# Scans staged changes for secrets before allowing the commit. Skipped with SKIP_GITLEAKS=1
+# (e.g. a known false positive already reviewed) or --no-verify.
+# Setup (once per clone): git config core.hooksPath .githooks
+
+if [ -n "$SKIP_GITLEAKS" ]; then
+    echo "gitleaks: skipped (SKIP_GITLEAKS set)"
+    exit 0
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "gitleaks: not installed, skipping secret scan (see .githooks/README.md)" >&2
+    exit 0
+fi
+
+gitleaks git --staged --redact -v .
