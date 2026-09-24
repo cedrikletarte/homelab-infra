@@ -41,7 +41,7 @@ Intended to run on a schedule via cron, e.g. every 5 minutes:
 
 - No alerts → script exits with no webhook call
 - Alerts found → 🚨 alert notification listing affected containers, plus which ones will be auto-restarted
-- After restart attempts → a second notification (`status: "ok"` or `"error"`) confirming which containers were restarted successfully vs. failed
+- After restart attempts → a second notification (`status: "repaired"` or `"error"`) confirming which containers were restarted successfully vs. failed
 
 ## Limitations
 

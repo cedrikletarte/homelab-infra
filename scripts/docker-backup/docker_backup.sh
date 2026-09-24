@@ -58,14 +58,14 @@ send_notification() {
         --arg content "$(echo -e "$msg")" \
         --arg source "docker_backup" \
         --arg status "$status" \
-        --arg logs "$(echo -e "$logs")" \
+        --rawfile logs <(echo -e "$logs" | tail -c 100000) \
         '{content: $content, source: $source, status: $status, logs: $logs}')
     local http_code
     http_code=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Content-Type: application/json" \
         -X POST \
-        -d "$json" \
-        "$WEBHOOK_URL")
+        --data-binary @- \
+        "$WEBHOOK_URL" <<<"$json")
     if [[ "$http_code" != "200" ]]; then
         echo "WARNING: n8n webhook HTTP $http_code"
     fi

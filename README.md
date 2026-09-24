@@ -46,7 +46,7 @@ Maintenance and monitoring scripts, each with its own README (setup, config, cro
 | [`scripts/gluetun-watchdog`](scripts/gluetun-watchdog/README.md) | Regenerate a dead PIA WireGuard config and recreate gluetun + its dependents |
 | [`scripts/pia-wireguard`](scripts/pia-wireguard/README.md) | Browse PIA regions/servers and generate WireGuard configs for gluetun |
 
-All scripts report status via an n8n webhook (Discord notification + PostgreSQL log).
+All scripts report status via an n8n webhook: every message is logged to PostgreSQL (`homelab_alerts`), and only non-`ok` statuses (`alert`, `error`, `repaired`, …) are sent to Discord.
 
 ---
 

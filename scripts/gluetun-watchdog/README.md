@@ -55,7 +55,7 @@ Intended to run on a schedule via cron, e.g. every 5 minutes:
 ## Notification behavior
 
 - Healthy, not yet past the threshold, host offline or in cooldown → no webhook call (logged only)
-- Regenerated and healthy again → `status: "ok"` with the cause, new server and recreated containers
+- Regenerated and healthy again → `status: "repaired"` with the cause, new server and recreated containers
 - Regeneration failed, or still unhealthy afterwards → `status: "error"`, retried after the cooldown
 
 ## Limitations

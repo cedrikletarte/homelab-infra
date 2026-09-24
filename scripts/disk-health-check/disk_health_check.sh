@@ -59,13 +59,13 @@ JSON=$(jq -n \
     --arg content "$MESSAGE" \
     --arg source "disk_health_check" \
     --arg status "$STATUS" \
-    --arg logs "$(echo -e "$LOGS")" \
+    --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
     '{content: $content, source: $source, status: $status, logs: $logs}')
 
 curl -s -o /dev/null \
      -H "Content-Type: application/json" \
      -X POST \
-     -d "$JSON" \
-     "$WEBHOOK_URL"
+     --data-binary @- \
+     "$WEBHOOK_URL" <<<"$JSON"
 
 echo "===== Script SMART END : $(date '+%Y-%m-%d %H:%M:%S') ====="

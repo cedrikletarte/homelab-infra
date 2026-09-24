@@ -33,9 +33,9 @@ notify() {
         --arg content "$(echo -e "$message\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')")" \
         --arg source "gluetun_watchdog" \
         --arg status "$status" \
-        --arg logs "$logs" \
+        --rawfile logs <(printf '%s' "$logs" | tail -c 100000) \
         '{content: $content, source: $source, status: $status, logs: $logs}')
-    curl -s -o /dev/null -H "Content-Type: application/json" -X POST -d "$JSON" "$WEBHOOK_URL"
+    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
 }
 
 internet_up() {
@@ -148,7 +148,7 @@ handle() {
     rm -f "$gen_log"
 
     if wait_healthy "$container"; then
-        notify "ok" "✅ **Gluetun watchdog — $HOSTNAME**\n**$container** was unhealthy for ${minutes}min ($cause)\nNew config: \`$new_cn\` ($region), recreated: $service $(echo $dependents)$env_note" "$(echo -e "$logs")"
+        notify "repaired" "✅ **Gluetun watchdog — $HOSTNAME**\n**$container** was unhealthy for ${minutes}min ($cause)\nNew config: \`$new_cn\` ($region), recreated: $service $(echo $dependents)$env_note" "$(echo -e "$logs")"
         log "$container healthy again on $new_cn"
     else
         notify "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** regenerated on \`$new_cn\` ($region) but still not healthy after ${HEALTHY_TIMEOUT}s$env_note" "$(echo -e "$logs")"

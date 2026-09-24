@@ -80,10 +80,10 @@ JSON=$(jq -n \
     --arg content "$(echo -e "$ALERT_MESSAGE")" \
     --arg source "docker_unhealthy_monitor" \
     --arg status "alert" \
-    --arg logs "$(echo -e "$LOGS")" \
+    --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
     '{content: $content, source: $source, status: $status, logs: $logs}')
 
-curl -s -o /dev/null -H "Content-Type: application/json" -X POST -d "$JSON" "$WEBHOOK_URL"
+curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
 
 # ─── Auto-restart unhealthy containers ───────────────────────────────────────
 for i in "${!TO_RESTART[@]}"; do
@@ -111,15 +111,15 @@ if [[ -n "$RESTARTED" || -n "$RESTART_ERRORS" ]]; then
     [[ -n "$RESTART_ERRORS" ]] && RESTART_MESSAGE+="$RESTART_ERRORS"
     RESTART_MESSAGE+="\n🕐 $NOW"
 
-    STATUS="ok"
+    STATUS="repaired"
     [[ -n "$RESTART_ERRORS" ]] && STATUS="error"
 
     JSON=$(jq -n \
         --arg content "$(echo -e "$RESTART_MESSAGE")" \
         --arg source "docker_unhealthy_monitor" \
         --arg status "$STATUS" \
-        --arg logs "$(echo -e "$LOGS")" \
+        --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
         '{content: $content, source: $source, status: $status, logs: $logs}')
 
-    curl -s -o /dev/null -H "Content-Type: application/json" -X POST -d "$JSON" "$WEBHOOK_URL"
+    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
 fi
