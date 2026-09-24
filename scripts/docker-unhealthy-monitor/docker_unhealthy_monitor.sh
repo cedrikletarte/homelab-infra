@@ -3,7 +3,7 @@
 # docker_unhealthy_monitor.sh — Monitor containers and auto-restart unhealthy ones
 # Replaces n8n workflow "docker unhealthy monitoring" (SSH-based)
 # Run via cron every 5 minutes:
-#   */5 * * * * /home/cedrik/scripts/docker_unhealthy_monitor.sh
+#   */5 * * * * /home/cedrik/homelab-infra/scripts/docker-unhealthy-monitor/docker_unhealthy_monitor.sh
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,6 +41,9 @@ while IFS='|' read -r name status state; do
     name=$(echo "$name" | xargs)
     status=$(echo "$status" | xargs)
     state=$(echo "$state" | xargs)
+
+    # Handled elsewhere (e.g. gluetun by gluetun_watchdog.sh)
+    [[ " $IGNORE_CONTAINERS " == *" $name "* ]] && continue
 
     LOGS+="=== $name ===\nState: $state | Status: $status\n\n"
 

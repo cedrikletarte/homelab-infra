@@ -1,4 +1,4 @@
-# docker_unhealty_monitor.sh — Unhealthy container monitor & auto-restart
+# docker_unhealthy_monitor.sh — Unhealthy container monitor & auto-restart
 
 Replaces the (SSH-based) n8n workflow "docker unhealthy monitoring". Meant to run frequently via cron and stays silent when everything is fine.
 
@@ -25,6 +25,7 @@ cp .env.exemple .env
 |---|---|
 | `WEBHOOK_URL` | n8n endpoint for notifications |
 | `HOMELAB_STACKS` | Root folder containing the stack subdirectories (`homelab-infra/stacks`) |
+| `IGNORE_CONTAINERS` | Space-separated container names to skip — gluetun containers, handled by [`gluetun-watchdog`](../gluetun-watchdog/README.md) |
 
 `.env` is gitignored — only `.env.exemple` is committed.
 
@@ -33,7 +34,7 @@ cp .env.exemple .env
 Intended to run on a schedule via cron, e.g. every 5 minutes:
 
 ```cron
-*/5 * * * * /home/cedrik/homelab-infra/scripts/docker-unhealty-monitor/docker_unhealty_monitor.sh
+*/5 * * * * /home/cedrik/homelab-infra/scripts/docker-unhealthy-monitor/docker_unhealthy_monitor.sh
 ```
 
 ## Notification behavior
@@ -46,3 +47,5 @@ Intended to run on a schedule via cron, e.g. every 5 minutes:
 
 - Containers in a `restarting` loop are reported but **not** auto-restarted (restarting them wouldn't help — the loop needs manual investigation)
 - Only containers whose compose stack was found under `HOMELAB_STACKS` can be auto-restarted; others are reported only
+- Uses `docker ps` without `-a`: stopped (`exited`/`created`) containers aren't seen, so the ❌ state check only catches `paused`/`restarting`
+- gluetun must be in `IGNORE_CONTAINERS`: restarting it doesn't fix a dead VPN config and leaves the containers sharing its network offline

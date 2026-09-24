@@ -41,7 +41,7 @@ Maintenance and monitoring scripts, each with its own README (setup, config, cro
 |---|---|
 | [`scripts/docker-backup`](scripts/docker-backup/README.md) | Encrypted backup of the homelab (config + Docker volumes) to OneDrive |
 | [`scripts/docker-pull-and-run`](scripts/docker-pull-and-run/README.md) | Pull latest images for every stack and restart the ones that changed |
-| [`scripts/docker-unhealty-monitor`](scripts/docker-unhealty-monitor/README.md) | Detect unhealthy/stopped containers and auto-restart them |
+| [`scripts/docker-unhealthy-monitor`](scripts/docker-unhealthy-monitor/README.md) | Detect unhealthy/stopped containers and auto-restart them |
 | [`scripts/disk-health-check`](scripts/disk-health-check/README.md) | SMART health check on all physical disks |
 
 All scripts report status via an n8n webhook (Discord notification + PostgreSQL log).
