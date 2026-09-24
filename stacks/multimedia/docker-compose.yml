@@ -8,6 +8,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: plex
@@ -135,6 +136,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: qbittorrent
@@ -162,6 +164,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: radarr
@@ -188,6 +191,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: sonarr
@@ -213,6 +217,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: lidarr
@@ -238,6 +243,7 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - SETUID
       - SETGID
     container_name: prowlarr
