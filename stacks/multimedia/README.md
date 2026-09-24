@@ -1,61 +1,77 @@
-# 🛡️ WireGuard + Private Internet Access (PIA) with Gluetun
+# WireGuard + Private Internet Access (PIA) with Gluetun
 
-## 🎯 Goal
+## Goal
 
-Set up a WireGuard VPN using Private Internet Access (PIA) with Gluetun, including port forwarding support.
+Set up a WireGuard VPN using Private Internet Access (PIA) with Gluetun, including port forwarding support. qBittorrent shares Gluetun's network (`network_mode: service:gluetun`), so all its traffic goes through the VPN.
 
 ---
 
-## 📦 Prerequisites
+## Prerequisites
 
 * Active PIA account
 * Docker + Docker Compose
 * Tools:
 
-  * https://github.com/kylegrantlucas/pia-wg-config
+  * [`scripts/pia-wireguard`](../../scripts/pia-wireguard/README.md) — generates the WireGuard config from PIA's API
+  * [`scripts/gluetun-watchdog`](../../scripts/gluetun-watchdog/README.md) — regenerates it automatically when it dies
   * https://github.com/qdm12/gluetun-wiki
 
+> `pia-wg-config` is no longer used: it fails on PIA's newer servers (`Server-XXXXX-Xa`) with `x509: certificate is not valid for any names`. See the `pia-wireguard` README.
+
 ---
 
-## ⚙️ 1. Generate the WireGuard config
-
-Run:
+## 1. Pick a region and server
 
 ```bash
-pia-wg-config -o wg0.conf -r ca_toronto USERNAME PASSWORD
-```
-
-Replace:
-
-* `USERNAME` → your PIA username
-* `PASSWORD` → your PIA password
-
----
-
-## 📁 2. Place the config file
-
-Move the file to:
-
-```
-./gluetun/wg0.conf
+cd ../../scripts/pia-wireguard
+./pia_wireguard.sh regions toronto      # filter on id, name or country; PF must be "yes"
+./pia_wireguard.sh servers ca_toronto   # reachable servers in the region
 ```
 
 ---
 
-## 🐳 3. Configure Gluetun (docker-compose)
+## 2. Generate the WireGuard config
+
+```bash
+./pia_wireguard.sh generate ca_toronto -o ../../stacks/multimedia/gluetun/wg0.conf
+```
+
+Credentials come from `scripts/pia-wireguard/.env` (`PIA_USER` / `PIA_PASS`), or are prompted. The script picks the first reachable server, backs up the previous `wg0.conf` and prints the server name to use:
+
+```text
+Set in the gluetun .env:
+  SERVER_NAMES=Server-12911-0a
+```
+
+---
+
+## 3. Set SERVER_NAMES
+
+In `.env`:
+
+```bash
+SERVER_NAMES=Server-12911-0a
+```
+
+It must match the server in `wg0.conf`: gluetun uses it to validate the TLS certificate of PIA's port forwarding API.
+
+---
+
+## 4. Configure Gluetun (docker-compose)
 
 Key settings:
 
 * `VPN_SERVICE_PROVIDER=custom`
 * `VPN_TYPE=wireguard`
 * `WIREGUARD_CONFIG_FILE=/gluetun/wireguard/wg0.conf`
-* `SERVER_NAMES=xxx` (required for port forwarding)
+* `SERVER_NAMES=${SERVER_NAMES}` (required for port forwarding)
+* `VPN_PORT_FORWARDING_PROVIDER=private internet access`
 
 Example:
 
 ```yaml
 devices:
-  - /dev/net/tun:/dev/net/tun
+  - /dev/net/tun
 
 volumes:
   - ./gluetun/wg0.conf:/gluetun/wireguard/wg0.conf
@@ -63,15 +79,17 @@ volumes:
 
 ---
 
-## 🚀 4. Start Gluetun
+## 5. Start (or restart) Gluetun
 
 ```bash
-docker compose up -d
+docker compose up -d --force-recreate gluetun qbittorrent
 ```
+
+Always recreate qBittorrent with Gluetun: it shares Gluetun's network and is left offline when Gluetun alone is restarted.
 
 ---
 
-## 🔍 5. Check logs
+## 6. Check logs
 
 ```bash
 docker logs -f gluetun
@@ -79,102 +97,70 @@ docker logs -f gluetun
 
 ---
 
-## 🧠 6. Find the correct SERVER_NAMES
-
-Look for:
-
-```text
-Public IP address is XXX (Canada, Ontario, Toronto)
-```
-
-Or TLS error:
-
-```text
-certificate is valid for toronto405, not toronto
-```
-
-👉 Correct server name in this example:
-
-```
-toronto405
-```
-
----
-
-## 🔁 7. Update SERVER_NAMES
-
-In `.env`:
-
-```yaml
-- SERVER_NAMES=toronto405
-```
-
-Restart:
+## 7. Verify the VPN and port forwarding
 
 ```bash
-docker compose down
-docker compose up -d
+docker ps --filter name=gluetun              # (healthy)
+docker exec qbittorrent wget -qO- https://ipinfo.io/ip   # a PIA IP, not yours
 ```
 
----
-
-## 🔓 8. Verify port forwarding
-
-Logs should show:
+Gluetun logs should show:
 
 ```text
-port forwarding assigned port XXXXX
+[port forwarding] port forwarded is XXXXX
+[port forwarding] up command: [PF] SUCCESS: Port XXXXX applied
 ```
 
 ---
 
-## 🔄 9. When to regenerate `wg0.conf`
+## 8. When `wg0.conf` must be regenerated
 
-Regenerate only if you see:
+PIA retires servers and drops keys without notice. The config is dead when Gluetun stays `unhealthy` and loops on:
 
-* `i/o timeout`
-* `endpoint IP is not set`
-* `tls: failed to verify certificate`
-* VPN no longer connects
+```text
+restarting VPN because it failed to pass the healthcheck: ... lookup cloudflare.com: i/o timeout
+```
+
+This is handled automatically by [`gluetun-watchdog`](../../scripts/gluetun-watchdog/README.md) (root cron, every 5 minutes): after 15 minutes unhealthy, it regenerates `wg0.conf`, updates `SERVER_NAMES`, recreates Gluetun + qBittorrent and notifies Discord.
+
+To do it by hand: steps 2, 3 and 5.
 
 ---
 
-## ⚠️ Important notes
+## Important notes
 
 * Do NOT mix OpenVPN and WireGuard configs
-* `SERVER_NAMES` is required for PIA port forwarding
-* `wg0.conf` contains the real endpoint (do not edit manually)
-* PIA port forwarding can be unstable
+* `SERVER_NAMES` is required for PIA port forwarding and must match the `wg0.conf` server
+* `wg0.conf` contains the private key (mode `600`, gitignored) — regenerate it rather than editing it
+* PIA returns a different subset of servers on each request, so server names change from one run to the next
 
 ---
 
-## 🧠 TL;DR
+## TL;DR
 
-1. Generate `wg0.conf`
-2. Mount it in Gluetun
-3. Start container
+1. `pia_wireguard.sh generate <region> -o gluetun/wg0.conf`
+2. Set the printed `SERVER_NAMES` in `.env`
+3. `docker compose up -d --force-recreate gluetun qbittorrent`
 4. Check logs
-5. Adjust `SERVER_NAMES`
-6. Done ✅
+5. Done: the watchdog takes care of future breakages
 
 ---
 
-## 💬 Quick troubleshooting
+## Quick troubleshooting
 
-| Issue                  | Cause                     |
-| ---------------------- | ------------------------- |
-| endpoint IP is not set | invalid wg0.conf          |
-| i/o timeout            | server down / UDP blocked |
-| TLS error              | wrong SERVER_NAMES        |
-| no port assigned       | PIA port forwarding issue |
+| Issue                                          | Cause                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| `lookup ... i/o timeout` loop, `unhealthy`     | server retired or key dropped by PIA → regenerate            |
+| endpoint IP is not set                         | invalid `wg0.conf`                                           |
+| `certificate is valid for X, not Y`            | `SERVER_NAMES` doesn't match the `wg0.conf` server           |
+| `API IP address not found`                     | port forwarding API unreachable → check `SERVER_NAMES`, regenerate |
+| qBittorrent stuck on "Downloading metadata"    | no network: Gluetun down, or qBittorrent not recreated with it |
 
 ---
 
-## 🚀 Final result
+## Final result
 
 * WireGuard VPN working
 * Public IP routed through PIA
 * Port forwarding enabled
-* Reproducible setup
-
----
+* Automatic recovery when PIA retires the server

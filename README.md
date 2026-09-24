@@ -43,6 +43,8 @@ Maintenance and monitoring scripts, each with its own README (setup, config, cro
 | [`scripts/docker-pull-and-run`](scripts/docker-pull-and-run/README.md) | Pull latest images for every stack and restart the ones that changed |
 | [`scripts/docker-unhealthy-monitor`](scripts/docker-unhealthy-monitor/README.md) | Detect unhealthy/stopped containers and auto-restart them |
 | [`scripts/disk-health-check`](scripts/disk-health-check/README.md) | SMART health check on all physical disks |
+| [`scripts/gluetun-watchdog`](scripts/gluetun-watchdog/README.md) | Regenerate a dead PIA WireGuard config and recreate gluetun + its dependents |
+| [`scripts/pia-wireguard`](scripts/pia-wireguard/README.md) | Browse PIA regions/servers and generate WireGuard configs for gluetun |
 
 All scripts report status via an n8n webhook (Discord notification + PostgreSQL log).
 
