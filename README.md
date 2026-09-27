@@ -40,7 +40,7 @@ Maintenance and monitoring scripts, each with its own README (setup, config, cro
 | Script | Purpose |
 |---|---|
 | [`scripts/docker-backup`](scripts/docker-backup/README.md) | Encrypted backup of the homelab (config + Docker volumes) to OneDrive |
-| [`scripts/docker-pull-and-run`](scripts/docker-pull-and-run/README.md) | Pull latest images for every stack and restart the ones that changed |
+| [`scripts/docker-pull-and-run`](scripts/docker-pull-and-run/README.md) | Nightly deploy: fast-forward the clone to `main`, then `docker compose up -d` every running stack |
 | [`scripts/docker-unhealthy-monitor`](scripts/docker-unhealthy-monitor/README.md) | Detect unhealthy/stopped containers and auto-restart them |
 | [`scripts/disk-health-check`](scripts/disk-health-check/README.md) | SMART health check on all physical disks |
 | [`scripts/gluetun-watchdog`](scripts/gluetun-watchdog/README.md) | Regenerate a dead PIA WireGuard config and recreate gluetun + its dependents |
@@ -60,7 +60,7 @@ Every image is pinned to an exact version in its `docker-compose.yml` (`traefik:
 - **Gluetun** publishes no versioned tag matching the development build in use, so it is pinned as `latest@sha256:…` and each new build comes as a digest update
 - **SearXNG** releases almost daily, so its merge request is opened on Saturdays only
 
-A merged update is not deployed by itself. On the server, `git pull`, then either let `docker_pull_and_run.sh` pull the new tag and restart the stack at its next run (behind the backup check), or run `docker compose up -d` in the stack. Stacks outside `stacks/` (`infrastructure/network`) are not scanned by the script and always need the manual `up -d`.
+A merged update is deployed by `docker_pull_and_run.sh` at its next nightly run: it fast-forwards the server's clone to `main` and runs `docker compose up -d` in every running stack, behind the backup check. To deploy right away, run it by hand. The clone is also the working copy: with local commits not pushed, the script does not merge and reports it instead, so push before the night.
 
 The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `main`:
 

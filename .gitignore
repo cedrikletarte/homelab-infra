@@ -16,6 +16,7 @@ settings.yml
 stacks-unused
 cloudflare
 docs
+legacy
 
 # -- Claude --
 CLAUDE.md

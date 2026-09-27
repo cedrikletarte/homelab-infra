@@ -1,21 +1,29 @@
-# docker_pull_and_run.sh — Auto-update Docker images
+# docker_pull_and_run.sh — Deploy what was merged on main
 
-Scans every stack under `homelab-infra/stacks`, pulls the images named in each `docker-compose.yml`, and restarts any stack whose images changed.
+Images are pinned to exact versions in the compose files and bumped by Renovate merge requests (see "Updates and CI" in the root README). Deploying therefore means two things: bring the server's clone up to date with `main`, then apply the compose files. This script does both, every night:
 
-Images are pinned to exact versions and bumped by Renovate merge requests (see "Updates and CI" in the root README), so a pull only brings something new after such a merge request was merged and the server ran `git pull`. The script is then what deploys it, behind the backup check.
+1. Checks that `docker_backup.sh` succeeded within the last `BACKUP_MAX_AGE_HOURS` (180 by default); otherwise nothing is done and the run is reported as an error. `--force` bypasses the check
+2. Fast-forwards the clone to `origin/main` (see "The clone is also a working copy" below)
+3. Runs `docker compose up -d` in every stack of `infrastructure/` and `stacks/` that has a running container. Compose pulls the images that are not on disk yet (a new pinned tag) and recreates only the containers whose definition changed; the others are left alone. Stacks with nothing running were stopped on purpose and are not started; stacks in `SKIP_STACKS` (`nextcloud` by default: Nextcloud AIO updates itself) and directories starting with `_` are skipped
+4. Removes the previous images of the recreated containers, once no container uses them
+5. Reports the result via an n8n webhook (Discord + PostgreSQL log)
 
-Steps:
+## The clone is also a working copy
 
-1. Checks that `docker_backup.sh` succeeded within the last `BACKUP_MAX_AGE_HOURS` (180 by default); otherwise no image is pulled and the run is reported as an error. `--force` bypasses the check
-2. Iterates over each subdirectory of `stacks/` containing a `docker-compose.yml` (directories starting with `_` are skipped — archived stacks, and so are the stacks listed in `SKIP_STACKS`, `nextcloud` by default)
-3. Records the current digest of each image, then runs `docker compose pull`
-4. If the pull reports a newer image, runs `docker compose up -d` to restart the stack with the new image
-5. Prunes dangling images older than 168h (`docker image prune -f --filter "until=168h"`) if any stack was updated
-6. Reports the result via an n8n webhook (Discord + PostgreSQL log)
+The clone the script deploys (`homelab-infra/`, found from the script's own location) is the one used to edit and commit, so the script never rewrites local work:
+
+- **Behind `origin/main` only**: fast-forward (`git merge --ff-only`), then deploy
+- **Local commits not pushed while `origin/main` moved on**: no merge. The run reports it (`alert`) and deploys the clone as it is; run `git pull --rebase` and push
+- **Uncommitted changes that the fast-forward would overwrite**: git refuses, the run reports it and deploys the clone as it is
+- **Another branch checked out**: no merge, reported, deployed as it is
+
+Uncommitted changes to a compose file are deployed like the rest: the script applies the files as they are on disk.
+
+Git runs as the owner of the clone (`sudo -u`), not as root, so that root never leaves files in `.git` the owner cannot write, and the owner's SSH key (without passphrase, cron has no agent) is used for the fetch.
 
 ## Prerequisites
 
-- `docker` (with the `compose` plugin), `jq`, `curl`
+- `docker` (with the `compose` plugin), `git`, `jq`, `curl`, `sudo`
 
 ## Configuration
 
@@ -26,38 +34,34 @@ cp .env.exemple .env
 | Variable | Purpose |
 |---|---|
 | `WEBHOOK_URL` | n8n endpoint for notifications |
-| `BASE_DIR` | Root folder containing the stack subdirectories (`homelab-infra/stacks`) |
-| `BACKUP_MAX_AGE_HOURS` | Optional, default `180`. Maximum age of the last successful backup for updates to run |
+| `BACKUP_MAX_AGE_HOURS` | Optional, default `180`. Maximum age of the last successful backup for a deploy to run |
 | `BACKUP_MARKER` | Optional, default `/var/lib/docker-backup/last_success`. File written by `docker_backup.sh` on success, must match its setting |
-| `PULL_ATTEMPTS` | Optional, default `3`. A failed `docker compose pull` (for example a registry rate limit, `toomanyrequests`) is retried up to this many times |
-| `PULL_RETRY_WAIT` | Optional, default `60`. Seconds to wait between two pull attempts |
-| `SKIP_STACKS` | Optional, default `nextcloud`. Space-separated stacks never updated automatically (Nextcloud AIO updates itself from its own interface) |
+| `PULL_ATTEMPTS` | Optional, default `3`. A failed `docker compose up -d` (for example a registry rate limit, `toomanyrequests`) is retried up to this many times |
+| `PULL_RETRY_WAIT` | Optional, default `60`. Seconds to wait between two attempts |
+| `SKIP_STACKS` | Optional, default `nextcloud`. Space-separated stack directory names never applied (`network` is the one of `infrastructure/network`) |
+| `GIT_REMOTE`, `GIT_BRANCH` | Optional, default `origin` and `main`. What the clone is fast-forwarded to |
 
-Set `BACKUP_MAX_AGE_HOURS` to a bit more than the interval between two backups. The default (`180` = 7.5 days) fits a weekly backup (Sunday 03:00) with a daily update (02:00): on Sunday at 02:00 the previous backup is 167 h old, still accepted. With a daily backup, use `30`.
+Set `BACKUP_MAX_AGE_HOURS` to a bit more than the interval between two backups. The default (`180` = 7.5 days) fits a weekly backup (Sunday 03:00) with a daily deploy (02:00): on Sunday at 02:00 the previous backup is 167 h old, still accepted. With a daily backup, use `30`.
 
-The guarantee is that a backup no older than a week exists, not that one was taken right before the update: rolling back data (not just the image) can lose up to a week of changes.
+The guarantee is that a backup no older than a week exists, not that one was taken right before the deploy: rolling back data (not just the image) can lose up to a week of changes.
 
 `.env` is gitignored — only `.env.exemple` is committed.
 
 ## Running the script
 
 ```bash
-sudo bash docker_pull_and_run.sh
+sudo bash docker_pull_and_run.sh            # what cron runs
+bash docker_pull_and_run.sh --dry-run       # show what would happen: no merge, no container change, no notification
 ```
+
+`--dry-run` still fetches, to tell how far behind the clone is, but checks the stacks against the clone as it is, before the merge.
 
 ## Notification behavior
 
-- `status: "ok"` — no updates found, or updates applied cleanly
-- `status: "error"` — a pull or restart failed for one or more stacks (details listed per stack)
-- Lists updated stacks with only the images that actually changed, each with its previous digest (`↩ rollback`), and a cleanup summary if images were pruned
-- `status: "error"` also covers updates skipped because there was no recent successful backup
+- `status: "ok"` — nothing to deploy, or the deploy went through: the message lists the git range applied, the recreated containers per stack and the removed images
+- `status: "alert"` — the clone could not be fast-forwarded (see above): the stacks were still applied from the clone as it is
+- `status: "error"` — a fetch or a `docker compose up -d` failed, or the deploy was skipped because there was no recent successful backup
 
-## Rolling back an image
+## Rolling back
 
-Take the digest from the notification and pin it in the stack's `docker-compose.yml`:
-
-```yaml
-image: vaultwarden/server@sha256:<digest from the notification>
-```
-
-then `docker compose up -d`. The previous image also stays on disk for 7 days (see the prune above). Put the normal tag back once the problem is fixed.
+Revert the commit that changed the image (`git revert <commit>` on `main`, pushed, or a revert merge request in GitLab). The next run deploys the previous version, pulling it again since the old image was removed from disk. For an immediate rollback, run the script by hand after the revert.
