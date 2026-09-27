@@ -82,6 +82,8 @@ deploy:
   resource_group: production
   script:
     - apk add --no-cache openssh-client
+    # GitLab strips the final newline of a File variable, and OpenSSH rejects a key without it ("error in libcrypto")
+    - echo >> "$DEPLOY_SSH_KEY"
     - chmod 600 "$DEPLOY_SSH_KEY"
     - ssh -i "$DEPLOY_SSH_KEY" -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o BatchMode=yes "$DEPLOY_TARGET"
 
