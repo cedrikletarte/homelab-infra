@@ -30,7 +30,7 @@ for dir in "$HOMELAB_STACKS"/*/; do
     compose_file="${dir}docker-compose.yml"
     [[ ! -f "$compose_file" ]] && continue
 
-    while IFS='|' read -r container_name container_dir; do
+    while IFS='|' read -r container_name _; do
         container_name=$(echo "$container_name" | xargs)
         [[ -n "$container_name" ]] && CONTAINER_DIR["$container_name"]="$dir"
     done < <(docker compose -f "$compose_file" ps --format "{{.Name}}|${dir}" 2>/dev/null)
