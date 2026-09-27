@@ -13,6 +13,7 @@ services:
         gitlab_rails['gitlab_shell_ssh_port'] = 2424
         # Memory-constrained mode (few users): single Puma process, fewer Sidekiq threads, no bundled Prometheus
         puma['worker_processes'] = 0
+        puma['per_worker_max_memory_mb'] = 2500
         sidekiq['concurrency'] = 10
         prometheus_monitoring['enable'] = false
     ports:
