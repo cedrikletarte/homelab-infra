@@ -1,0 +1,80 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":disableRateLimiting"],
+  "timezone": "America/Toronto",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Images this repo does not version: Nextcloud AIO updates itself from its own interface, portfolio-app is built locally by CI",
+      "matchPackageNames": ["ghcr.io/nextcloud-releases/all-in-one", "portfolio-app"],
+      "enabled": false
+    },
+    {
+      "description": "Immich's database and Redis images are chosen by Immich's release compose file: change them only when an Immich release says so",
+      "matchPackageNames": ["ghcr.io/immich-app/postgres", "docker.io/redis"],
+      "enabled": false
+    },
+    {
+      "description": "linuxserver.io tags carry the app version plus a -lsNNN build number (and a libtorrent or -rN part for some images)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/(^|/)linuxserver//"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:\\.(?<build>\\d+))?(?:_v[\\d.]+)?(?:-r\\d+)?-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "Plex and SearXNG tags end with a commit hash, which must not be read as a variant of the image",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["plexinc/pms-docker"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-[0-9a-f]+$"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["docker.io/searxng/searxng"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-[0-9a-f]+$"
+    },
+    {
+      "description": "SearXNG publishes almost every day: one merge request a week is enough",
+      "matchPackageNames": ["docker.io/searxng/searxng"],
+      "schedule": ["* * * * 6"]
+    },
+    {
+      "description": "Immich server and machine learning must always run the same version",
+      "matchPackageNames": ["ghcr.io/immich-app/immich-server", "ghcr.io/immich-app/immich-machine-learning"],
+      "groupName": "immich"
+    },
+    {
+      "description": "GitLab Runner should follow the GitLab version; GitLab majors need the documented upgrade path",
+      "matchPackageNames": ["gitlab/gitlab-ee", "gitlab/gitlab-runner"],
+      "groupName": "gitlab"
+    },
+    {
+      "description": "A Postgres or Valkey major version needs a data migration (dump/restore or pg_upgrade), never a tag bump",
+      "matchPackageNames": ["postgres", "docker.io/valkey/valkey"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "The media apps have the same release rhythm: one merge request for all of them",
+      "matchFileNames": ["stacks/multimedia/**"],
+      "matchPackageNames": ["!qmcgaw/gluetun", "!plexinc/pms-docker"],
+      "groupName": "multimedia"
+    },
+    {
+      "description": "Patch releases and digest refreshes merge on their own once the pipeline passes, except for services where a bad release loses data, access or the network",
+      "matchUpdateTypes": ["patch", "digest"],
+      "matchPackageNames": [
+        "!postgres",
+        "!docker.io/valkey/valkey",
+        "!gitlab/gitlab-ee",
+        "!gitlab/gitlab-runner",
+        "!/^ghcr\\.io/immich-app//",
+        "!vaultwarden/server",
+        "!traefik",
+        "!crowdsecurity/crowdsec",
+        "!cloudflare/cloudflared",
+        "!/(^|/)linuxserver/wireguard$/",
+        "!qmcgaw/gluetun"
+      ],
+      "automerge": true
+    }
+  ]
+}

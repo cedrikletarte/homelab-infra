@@ -1,6 +1,10 @@
 # docker_pull_and_run.sh — Auto-update Docker images
 
-Scans every stack under `homelab-infra/stacks`, pulls the latest images, and restarts any stack whose images changed:
+Scans every stack under `homelab-infra/stacks`, pulls the images named in each `docker-compose.yml`, and restarts any stack whose images changed.
+
+Images are pinned to exact versions and bumped by Renovate merge requests (see "Updates and CI" in the root README), so a pull only brings something new after such a merge request was merged and the server ran `git pull`. The script is then what deploys it, behind the backup check.
+
+Steps:
 
 1. Checks that `docker_backup.sh` succeeded within the last `BACKUP_MAX_AGE_HOURS` (180 by default); otherwise no image is pulled and the run is reported as an error. `--force` bypasses the check
 2. Iterates over each subdirectory of `stacks/` containing a `docker-compose.yml` (directories starting with `_` are skipped — archived stacks, and so are the stacks listed in `SKIP_STACKS`, `nextcloud` by default)

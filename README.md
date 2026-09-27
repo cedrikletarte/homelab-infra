@@ -50,6 +50,40 @@ All scripts report status via an n8n webhook: every message is logged to Postgre
 
 ---
 
+## Updates and CI
+
+Every image is pinned to an exact version in its `docker-compose.yml` (`traefik:v3.6.25`, not `traefik:v3.6` or `latest`), so the repo always says what runs. [Renovate](https://docs.renovatebot.com/) looks for newer versions and opens one merge request per update, with the release notes. Its rules are in `renovate.json`:
+
+- **Merged automatically** once the pipeline passes: patch releases and digest refreshes, except for Postgres, Valkey, GitLab, Immich, Vaultwarden, Traefik, CrowdSec, cloudflared, WireGuard and Gluetun, which always wait for a manual merge
+- **Grouped**: Immich server and machine learning (same version required), GitLab and its runner, the media apps of `stacks/multimedia`
+- **Never proposed**: Nextcloud AIO (updates itself), `portfolio-app` (built by CI), Immich's database and Redis (chosen by Immich's releases), Postgres and Valkey major versions (need a data migration)
+- **Gluetun** publishes no versioned tag matching the development build in use, so it is pinned as `latest@sha256:…` and each new build comes as a digest update
+- **SearXNG** releases almost daily, so its merge request is opened on Saturdays only
+
+A merged update is not deployed by itself. On the server, `git pull`, then either let `docker_pull_and_run.sh` pull the new tag and restart the stack at its next run (behind the backup check), or run `docker compose up -d` in the stack. Stacks outside `stacks/` (`infrastructure/network`) are not scanned by the script and always need the manual `up -d`.
+
+The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `main`:
+
+| Job | Checks |
+|---|---|
+| `compose-config` | `docker compose config` on every stack, against its `.env.exemple` |
+| `shellcheck` | Every shell script, at `warning` severity |
+| `gitleaks` | The whole git history for secrets |
+| `renovate-config` | `renovate.json`, only when it changes |
+
+The `renovate` job runs only from a pipeline schedule.
+
+### One-time setup in GitLab
+
+1. In *Settings > Access tokens*, create a project access token named `renovate-bot`, role **Maintainer** (a Developer cannot merge into the protected `main`, which automerge needs), scopes `api` and `write_repository`. GitLab creates the matching bot user itself
+2. Create a GitHub personal access token (fine-grained, public repositories read-only, no permission needed): Renovate uses it to read release notes without hitting GitHub's anonymous rate limit
+3. In *Settings > CI/CD > Variables*, add `RENOVATE_TOKEN` (the bot token) and `GITHUB_COM_TOKEN`, both **Masked** and **Protected**
+4. In *Build > Pipeline schedules*, add a schedule on `main`, for example `0 1 * * *` (01:00, before `docker_pull_and_run.sh`)
+5. Check that the runner picks untagged jobs (*Settings > CI/CD > Runners*, edit the runner, *Run untagged jobs*)
+6. Optional, for automerge: *Settings > Merge requests*, enable *Pipelines must succeed*
+
+---
+
 ## Usage
 
 ```bash

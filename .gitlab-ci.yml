@@ -1,0 +1,91 @@
+# Checks every merge request and every push to main; the scheduled pipeline only runs Renovate.
+# Setup (CI/CD variables, pipeline schedule): see the "Updates and CI" section of README.md.
+
+stages:
+  - validate
+  - renovate
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+.validate:
+  stage: validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule"
+
+# docker compose config on every stack. The real .env files are not in git, so each stack is checked
+# against its committed .env.exemple / .env.example, with a placeholder for the values left empty there
+# (an empty path would make a volume spec invalid). A variable missing from the example only warns.
+compose-config:
+  extends: .validate
+  image: docker:29.8.1-cli
+  script:
+    - |
+      status=0
+      for file in $(find infrastructure stacks deployments -name docker-compose.yml | sort); do
+        dir=$(dirname "$file")
+        for example in "$dir/.env.exemple" "$dir/.env.example"; do
+          [ -f "$example" ] && [ ! -f "$dir/.env" ] && sed 's/^\([A-Za-z0-9_]*\)=$/\1=.\/ci-placeholder/' "$example" > "$dir/.env"
+        done
+        if docker compose -f "$file" config --quiet; then
+          echo "ok      $file"
+        else
+          echo "FAILED  $file"
+          status=1
+        fi
+      done
+      exit $status
+
+shellcheck:
+  extends: .validate
+  image: koalaman/shellcheck-alpine:v0.11.0
+  script:
+    - shellcheck --severity=warning $(find . -name '*.sh' -not -path './.git/*') .githooks/pre-commit
+
+# Full history, not just the new commits: the repo is small and a secret stays exposed as long as it is in history.
+gitleaks:
+  extends: .validate
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - gitleaks git --redact --verbose .
+
+renovate-config:
+  extends: .validate
+  image: ghcr.io/renovatebot/renovate:44.115.10
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule"
+      changes:
+        - renovate.json
+  script:
+    - renovate-config-validator --strict
+
+# Opens and updates the dependency merge requests. Runs from a pipeline schedule (and only when the
+# token is set), with RENOVATE_TOKEN (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.
+renovate:
+  stage: renovate
+  image: ghcr.io/renovatebot/renovate:44.115.10
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN
+  variables:
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
+    RENOVATE_REPOSITORIES: $CI_PROJECT_PATH
+    RENOVATE_ONBOARDING: "false"
+    RENOVATE_REQUIRE_CONFIG: required
+    RENOVATE_BASE_DIR: $CI_PROJECT_DIR/.renovate
+    LOG_LEVEL: info
+  cache:
+    key: renovate
+    paths:
+      - .renovate/
+  script:
+    - renovate
