@@ -34,6 +34,7 @@ BACKUP_DIRS=(
 
 ERRORS=""
 LOGS=""
+BACKUP_FAILED=""   # set when the data itself was not archived or uploaded (not for stack restart problems)
 STOPPED_STACK_NAMES=()
 STARTED_STACK_NAMES=()
 ARCHIVE_PATHS=()
@@ -54,12 +55,18 @@ send_notification() {
     local status="$2"
     local logs="$3"
     local json
+    # Everything goes through files (--rawfile), never through arguments: a single argument is limited to
+    # 128 KiB by the kernel. The content is capped below Discord's 2000 characters limit.
     json=$(jq -n \
-        --arg content "$(echo -e "$msg")" \
+        --rawfile content <(printf '%b' "$msg" | head -c 1900) \
         --arg source "docker_backup" \
         --arg status "$status" \
-        --rawfile logs <(echo -e "$logs" | tail -c 100000) \
+        --rawfile logs <(printf '%b' "$logs" | tail -c 100000) \
         '{content: $content, source: $source, status: $status, logs: $logs}')
+    if [[ -z "$json" ]]; then
+        echo "WARNING: could not build the notification (message: ${#msg} bytes, logs: ${#logs} bytes); sending a minimal one"
+        json=$(printf '{"source":"docker_backup","status":"%s","content":"Docker backup finished with status %s, but the full report could not be built. See the log on the server.","logs":""}' "$status" "$status")
+    fi
     local http_code
     http_code=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Content-Type: application/json" \
@@ -137,6 +144,7 @@ for SRC_DIR in "${BACKUP_DIRS[@]}"; do
 
     if [[ ! -d "$SRC_DIR" ]]; then
         ERRORS+="• **$DIR_LABEL** — directory $SRC_DIR not found\n"
+        BACKUP_FAILED=1
         LOGS+="=== tar ($DIR_LABEL) ===\nERROR: $SRC_DIR not found\n\n"
         echo "ERROR: $SRC_DIR not found"
         continue
@@ -150,6 +158,7 @@ for SRC_DIR in "${BACKUP_DIRS[@]}"; do
     LOGS+="=== tar ($DIR_LABEL) ===\n$TAR_OUTPUT\n\n"
     if [[ $TAR_EXIT -ne 0 ]]; then
         ERRORS+="• **$DIR_LABEL** — compression failed: \`$TAR_OUTPUT\`\n"
+        BACKUP_FAILED=1
         echo "ERROR: tar failed — $TAR_OUTPUT"
     else
         ARCHIVE_SIZE=$(du -sh "$ARCHIVE_PATH" 2>/dev/null | cut -f1)
@@ -181,6 +190,7 @@ RCLONE_EXIT=$?
 LOGS+="=== rclone homelab-infra ===\n$RCLONE_OUT\n\n"
 if [[ $RCLONE_EXIT -ne 0 ]]; then
     RCLONE_ERRORS+="• **homelab-infra** — rclone copy failed (exit $RCLONE_EXIT)\n"
+    BACKUP_FAILED=1
     echo "  ERROR: rclone copy homelab-infra failed"
 else
     echo "  ✓ homelab-infra uploaded"
@@ -189,6 +199,7 @@ fi
 # 4b. Copy backup archives
 if [[ ${#ARCHIVE_PATHS[@]} -eq 0 ]]; then
     RCLONE_ERRORS+="• **archives** — no archive was created, upload skipped\n"
+    BACKUP_FAILED=1
     LOGS+="=== rclone archives ===\nWARNING: no archive to upload\n\n"
     echo "  WARNING: no archive to upload"
 else
@@ -203,6 +214,7 @@ else
         LOGS+="=== rclone archive ($ARCHIVE_NAME) ===\n$RCLONE_OUT\n\n"
         if [[ $RCLONE_EXIT -ne 0 ]]; then
             RCLONE_ERRORS+="• **$ARCHIVE_NAME** — rclone copy failed (exit $RCLONE_EXIT)\n"
+            BACKUP_FAILED=1
             echo "  ERROR: rclone copy archive failed"
         else
             echo "  ✓ $ARCHIVE_NAME uploaded"
@@ -281,7 +293,13 @@ if [[ -n "$ERRORS" ]]; then
 else
     MESSAGE+="✅ Backup completed without errors\n"
     STATUS="ok"
+fi
+
+# The marker means "a complete backup exists" (read by docker_pull_and_run.sh). A stack that fails to restart
+# afterwards says nothing about the archives, so only failures of the archiving or the upload block it.
+if [[ -z "$BACKUP_FAILED" ]]; then
     mkdir -p "$(dirname "$BACKUP_MARKER")" && date +%s > "$BACKUP_MARKER"
+    [[ "$STATUS" == "error" ]] && MESSAGE+="The archives were uploaded; the errors above only concern the restart of stacks.\n"
 fi
 
 MESSAGE+="🕐 $(date '+%Y-%m-%d %H:%M:%S')"

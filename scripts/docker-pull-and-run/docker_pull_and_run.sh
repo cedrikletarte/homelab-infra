@@ -21,6 +21,8 @@ set +a
 BACKUP_MARKER="${BACKUP_MARKER:-/var/lib/docker-backup/last_success}"   # written by docker_backup.sh
 BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-180}"                     # weekly backup (Sun 03:00) vs daily update (02:00): 7 days + margin
 SKIP_STACKS="${SKIP_STACKS:-nextcloud}"                                 # space-separated stack names
+PULL_ATTEMPTS="${PULL_ATTEMPTS:-3}"                                     # a pull can fail for a passing reason (registry rate limit)
+PULL_RETRY_WAIT="${PULL_RETRY_WAIT:-60}"                                # seconds between two attempts
 
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
@@ -76,9 +78,20 @@ for dir in "$BASE_DIR"/*/; do
             OLD_DIGEST["$img"]=$(image_digest "$img")
         done
 
-        # Pull images and capture output
-        PULL_OUTPUT=$(docker compose pull 2>&1)
-        PULL_EXIT=$?
+        # Pull images and capture output. Retry when it fails (registry rate limit, network blip): images that
+        # were fetched by an earlier attempt are not downloaded again, and their new layers stay in the output
+        # so the stack is still recognised as updated.
+        PULL_OUTPUT=""
+        for attempt in $(seq 1 "$PULL_ATTEMPTS"); do
+            ATTEMPT_OUTPUT=$(docker compose pull 2>&1)
+            PULL_EXIT=$?
+            PULL_OUTPUT+="$ATTEMPT_OUTPUT"$'\n'
+            [[ $PULL_EXIT -eq 0 ]] && break
+            if [[ $attempt -lt $PULL_ATTEMPTS ]]; then
+                echo "Pull failed for $STACK (attempt $attempt/$PULL_ATTEMPTS), retrying in ${PULL_RETRY_WAIT}s"
+                sleep "$PULL_RETRY_WAIT"
+            fi
+        done
         LOGS+="=== pull : $STACK ===\n$PULL_OUTPUT\n\n"
 
         # Check for pull errors

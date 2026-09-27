@@ -25,6 +25,8 @@ cp .env.exemple .env
 | `BASE_DIR` | Root folder containing the stack subdirectories (`homelab-infra/stacks`) |
 | `BACKUP_MAX_AGE_HOURS` | Optional, default `180`. Maximum age of the last successful backup for updates to run |
 | `BACKUP_MARKER` | Optional, default `/var/lib/docker-backup/last_success`. File written by `docker_backup.sh` on success, must match its setting |
+| `PULL_ATTEMPTS` | Optional, default `3`. A failed `docker compose pull` (for example a registry rate limit, `toomanyrequests`) is retried up to this many times |
+| `PULL_RETRY_WAIT` | Optional, default `60`. Seconds to wait between two pull attempts |
 | `SKIP_STACKS` | Optional, default `nextcloud`. Space-separated stacks never updated automatically (Nextcloud AIO updates itself from its own interface) |
 
 Set `BACKUP_MAX_AGE_HOURS` to a bit more than the interval between two backups. The default (`180` = 7.5 days) fits a weekly backup (Sunday 03:00) with a daily update (02:00): on Sunday at 02:00 the previous backup is 167 h old, still accepted. With a daily backup, use `30`.

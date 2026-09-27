@@ -135,7 +135,11 @@ rclone copy cryptdrive:2026-08-23 ~/Desktop/homelab --progress # decrypt and cop
 
 ## Success marker
 
-After a backup with no error, the script writes the current timestamp to `BACKUP_MARKER` (`/var/lib/docker-backup/last_success` by default). `docker_pull_and_run.sh` reads it and refuses to update images unless a backup succeeded recently, so an update never runs without a fresh backup behind it.
+When the archives have been created and uploaded, the script writes the current timestamp to `BACKUP_MARKER` (`/var/lib/docker-backup/last_success` by default). `docker_pull_and_run.sh` reads it and refuses to update images unless a backup succeeded recently, so an update never runs without a fresh backup behind it.
+
+The marker only depends on the backup data: a failed `tar`, a missing source directory or a failed `rclone` upload prevents it. A stack that does not restart afterwards (for example an unhealthy VPN container) is still reported as an error in the notification, but it does not prevent the marker, since it says nothing about the archives.
+
+If a backup was made by hand outside this script, the marker can be written manually with the time of that backup: `date -d '2026-09-20 17:07:00' +%s | sudo tee /var/lib/docker-backup/last_success`.
 
 ## Error handling
 
