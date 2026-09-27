@@ -1,0 +1,5 @@
+# The only command the CI deploy key can run, as root, detached from the SSH session
+security_deploy_command: >-
+  /usr/bin/systemd-run --unit=homelab-deploy --collect /usr/bin/bash
+  {{ repo_dir }}/scripts/docker-pull-and-run/docker_pull_and_run.sh
+security_deploy_key: "/home/{{ admin_user }}/.ssh/homelab_deploy"

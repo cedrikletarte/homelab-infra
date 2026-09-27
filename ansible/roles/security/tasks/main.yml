@@ -1,0 +1,95 @@
+- name: Firewall installed
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  tags: [firewall]
+
+- name: Firewall default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    default: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: deny }
+    - { direction: outgoing, policy: allow }
+    - { direction: routed, policy: deny }
+  tags: [firewall]
+
+- name: Firewall logging
+  community.general.ufw:
+    logging: "low"
+  tags: [firewall]
+
+# Ports published by Docker never reach these rules: Docker's own iptables rules come first.
+# Only services listening on the host itself are listed (Plex runs with network_mode: host).
+- name: SSH from trusted networks
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    from_ip: "{{ item.cidr }}"
+    comment: "ssh {{ item.name }}"
+  loop: "{{ trusted_networks }}"
+  tags: [firewall]
+
+- name: Samba from trusted networks
+  community.general.ufw:
+    rule: allow
+    name: Samba
+    from_ip: "{{ item.cidr }}"
+  loop: "{{ trusted_networks }}"
+  tags: [firewall]
+
+- name: Webmin from trusted networks
+  community.general.ufw:
+    rule: allow
+    port: "10000"
+    proto: tcp
+    from_ip: "{{ item.cidr }}"
+    comment: "webmin {{ item.name }}"
+  loop: "{{ trusted_networks }}"
+  tags: [firewall]
+
+- name: Plex from anywhere
+  community.general.ufw:
+    rule: allow
+    port: "32400"
+    proto: tcp
+    comment: Plex Media Server
+  tags: [firewall]
+
+- name: Firewall enabled
+  community.general.ufw:
+    state: enabled
+  tags: [firewall]
+
+- name: Deploy command allowed as root for the admin user
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/homelab-deploy
+    owner: root
+    group: root
+    mode: "0640"
+    content: "{{ admin_user }} ALL=(root) NOPASSWD: {{ security_deploy_command }}\n"
+    validate: visudo -cf %s
+  tags: [deploy_key]
+
+- name: Deploy key pair
+  ansible.builtin.command: ssh-keygen -t ed25519 -N '' -C gitlab-deploy -f {{ security_deploy_key }}
+  args:
+    creates: "{{ security_deploy_key }}"
+  become: true
+  become_user: "{{ admin_user }}"
+  tags: [deploy_key]
+
+- name: Read the deploy public key
+  ansible.builtin.slurp:
+    src: "{{ security_deploy_key }}.pub"
+  register: security_deploy_pubkey
+  tags: [deploy_key]
+
+# A new key (fresh install) must also replace DEPLOY_SSH_KEY in GitLab (see the root README)
+- name: Deploy key restricted to the deploy command
+  ansible.posix.authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ security_deploy_pubkey.content | b64decode }}"
+    key_options: 'restrict,command="sudo -n {{ security_deploy_command }}"'
+  tags: [deploy_key]

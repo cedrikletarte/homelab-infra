@@ -24,3 +24,6 @@ CONTEXT.md
 
 # -- CrowdSec --
 **/crowdsec/notifications/http.yaml
+
+# -- Ansible --
+ansible/host_vars/homelab.yml

@@ -1,0 +1,4 @@
+# Collections used by the roles (already bundled with the Ubuntu `ansible` package)
+collections:
+  - name: community.general
+  - name: ansible.posix

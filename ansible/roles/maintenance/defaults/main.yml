@@ -1,0 +1,7 @@
+# Where the scripts run by cron append their output
+maintenance_log_file: "/home/{{ admin_user }}/logfile.log"
+
+# Short self-test every day at 04:00, long self-test on Saturdays at 05:00
+maintenance_smartd_line: >-
+  DEVICESCAN -d removable -n standby -m root -M exec /usr/share/smartmontools/smartd-runner
+  -s (S/../.././04|L/../../6/05)

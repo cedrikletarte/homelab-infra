@@ -1,0 +1,80 @@
+- name: Disk health tools installed
+  ansible.builtin.apt:
+    name: smartmontools
+    state: present
+  tags: [smart]
+
+- name: SMART self-tests scheduled
+  ansible.builtin.lineinfile:
+    path: /etc/smartd.conf
+    regexp: '^DEVICESCAN'
+    line: "{{ maintenance_smartd_line }}"
+  notify: Restart smartd
+  tags: [smart]
+
+- name: SMART monitoring running
+  ansible.builtin.service:
+    name: smartmontools
+    state: started
+    enabled: true
+  tags: [smart]
+
+- name: Webmin apt key
+  ansible.builtin.shell:
+    cmd: set -o pipefail && curl -fsSL https://download.webmin.com/developers-key.asc | gpg --dearmor -o /usr/share/keyrings/ubuntu-webmin-developers.gpg
+    executable: /bin/bash
+    creates: /usr/share/keyrings/ubuntu-webmin-developers.gpg
+  tags: [webmin]
+
+- name: Webmin apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/webmin-stable.list
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      deb [signed-by=/usr/share/keyrings/ubuntu-webmin-developers.gpg] https://download.webmin.com/download/newkey/repository stable contrib
+  notify: Refresh package lists for Webmin
+  tags: [webmin]
+
+- name: Package lists know the repository before installing from it
+  ansible.builtin.meta: flush_handlers
+  tags: [webmin]
+
+- name: Webmin installed
+  ansible.builtin.apt:
+    name: webmin
+    state: present
+  tags: [webmin]
+
+- name: Webmin running
+  ansible.builtin.service:
+    name: webmin
+    state: started
+    enabled: true
+  tags: [webmin]
+
+- name: Maintenance scripts scheduled
+  ansible.builtin.template:
+    src: homelab-infra.cron.j2
+    dest: /etc/cron.d/homelab-infra
+    owner: root
+    group: root
+    mode: "0644"
+  tags: [cron]
+
+# The same jobs used to live in root's crontab: removing them in the same run avoids running them twice.
+# No-op on a fresh install. Webmin's own line (package-updates) stays, Webmin manages it.
+- name: Old copies of the jobs removed from root's crontab
+  ansible.builtin.lineinfile:
+    path: /var/spool/cron/crontabs/root
+    regexp: '^[^#].*/scripts/{{ item }}\b'
+    state: absent
+  loop:
+    - disk-health-check/disk_health_check.sh
+    - docker-pull-and-run/docker_pull_and_run.sh
+    - docker-backup/docker_backup.sh
+    - docker-unhealthy-monitor/docker_unhealthy_monitor.sh
+    - gluetun-watchdog/gluetun_watchdog.sh
+  failed_when: false
+  tags: [cron]

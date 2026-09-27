@@ -1,0 +1,57 @@
+# Copy to homelab.yml (gitignored: the repo is mirrored publicly) and fill in the real values.
+
+hostname: homelab
+timezone: America/Toronto
+
+# Account that owns the homelab-infra clone and runs docker
+admin_user: <user>
+admin_groups: [adm, cdrom, sudo, dip, plugdev, users, media]
+
+# Account and group owning the media library
+media_user: media
+media_uid: 1006
+media_group: media
+media_gid: 1004
+
+# Static address of the server (netplan)
+network_interface: eno1
+network_address: 192.168.1.10/24
+network_gateway: 192.168.1.1
+network_dns: [192.168.1.1]
+
+# Data disk, mounted by UUID (blkid)
+data_disk_uuid: <uuid>
+data_disk_path: /mnt/data
+
+swap_file: /swap.img
+swap_size: 4G
+
+# Networks allowed to reach SSH, Samba and Webmin: the LAN, and the WireGuard server's Docker subnet (ADR 0007)
+trusted_networks:
+  - { name: LAN, cidr: 192.168.1.0/24 }
+  - { name: WireGuard, cidr: 172.18.0.0/16 }
+
+# Samba shares, options in the order they are written to smb.conf
+samba_shares:
+  - name: <user>
+    options:
+      path: /home/<user>
+      browseable: "yes"
+      read only: "no"
+      writable: "yes"
+      valid users: <user>
+      force user: <user>
+      force group: <user>
+      create mask: "0775"
+      directory mask: "0775"
+      public: "no"
+      guest ok: "no"
+  - name: data
+    options:
+      comment: /mnt/data
+      valid users: <user>
+      path: /mnt/data
+      read only: "no"
+      browsable: "yes"
+      inherit permissions: "yes"
+      writeable: "yes"

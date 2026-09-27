@@ -1,0 +1,95 @@
+- name: Hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+
+- name: Timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Media group
+  ansible.builtin.group:
+    name: "{{ media_group }}"
+    gid: "{{ media_gid }}"
+
+- name: Media user
+  ansible.builtin.user:
+    name: "{{ media_user }}"
+    uid: "{{ media_uid }}"
+    group: "{{ media_group }}"
+    shell: /bin/bash
+
+# append: groups added by other roles (docker) or by hand are kept
+- name: Admin user groups
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: "{{ admin_groups }}"
+    append: true
+
+- name: Static network address
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/00-installer-config.yaml
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply netplan
+
+- name: Data disk mounted by UUID
+  ansible.posix.mount:
+    path: "{{ data_disk_path }}"
+    src: "UUID={{ data_disk_uuid }}"
+    fstype: ext4
+    opts: defaults
+    dump: "0"
+    passno: "2"
+    state: mounted
+
+- name: Data disk writable by the admin user
+  ansible.builtin.file:
+    path: "{{ data_disk_path }}"
+    owner: root
+    group: "{{ admin_user }}"
+    mode: "0775"
+
+- name: Swap file exists
+  ansible.builtin.command: fallocate -l {{ swap_size }} {{ swap_file }}
+  args:
+    creates: "{{ swap_file }}"
+  notify: Format and enable swap
+
+- name: Swap in fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^{{ swap_file }}\s'
+    line: "{{ swap_file }}\tnone\tswap\tsw\t0\t0"
+
+- name: SSH hardening (keys only, no root login)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?\s*{{ item.key }}\s'
+    line: "{{ item.key }} {{ item.value }}"
+    validate: sshd -t -f %s
+  loop:
+    - { key: PermitRootLogin, value: "no" }
+    - { key: PubkeyAuthentication, value: "yes" }
+    - { key: PasswordAuthentication, value: "no" }
+    - { key: KbdInteractiveAuthentication, value: "no" }
+    - { key: UsePAM, value: "yes" }
+    - { key: AuthenticationMethods, value: publickey }
+  notify: Reload ssh
+
+- name: Unattended security upgrades installed
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+
+- name: Unattended upgrades enabled
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";

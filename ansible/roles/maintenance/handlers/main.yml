@@ -1,0 +1,8 @@
+- name: Restart smartd
+  ansible.builtin.service:
+    name: smartmontools
+    state: restarted
+
+- name: Refresh package lists for Webmin
+  ansible.builtin.apt:
+    update_cache: true

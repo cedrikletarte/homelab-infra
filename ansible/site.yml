@@ -1,0 +1,12 @@
+- name: Homelab server
+  hosts: homelab
+  become: true
+  vars:
+    # Clone of this repo on the server: the maintenance scripts run from it
+    repo_dir: "/home/{{ admin_user }}/homelab-infra"
+  roles:
+    - { role: base, tags: [base] }
+    - { role: security, tags: [security] }
+    - { role: docker, tags: [docker] }
+    - { role: samba, tags: [samba] }
+    - { role: maintenance, tags: [maintenance] }

@@ -1,0 +1,21 @@
+- name: Samba installed
+  ansible.builtin.apt:
+    name: samba
+    state: present
+
+- name: Samba configuration
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: testparm -s %s
+  notify: Reload samba
+
+- name: Samba running
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: [smbd, nmbd]

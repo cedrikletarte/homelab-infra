@@ -1,0 +1,39 @@
+# Docker's own repository, for the running Ubuntu release. Packages are only ensured present:
+# upgrading the engine restarts every container, so it stays a manual `apt upgrade`.
+- name: Docker apt key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    force: false
+
+- name: Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_distribution_release }}"
+    components: stable
+    architectures: amd64
+    signed_by: /etc/apt/keyrings/docker.asc
+  notify: Refresh package lists for Docker
+
+- name: Package lists know the repository before installing from it
+  ansible.builtin.meta: flush_handlers
+
+- name: Docker packages
+  ansible.builtin.apt:
+    name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+    state: present
+
+- name: Docker running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Admin user can run docker
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: [docker]
+    append: true

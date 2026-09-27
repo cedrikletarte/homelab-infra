@@ -1,0 +1,7 @@
+# Managed by Ansible (maintenance role). Each script is described in scripts/<name>/README.md.
+# m h dom mon dow user command
+0 2 * * * root {{ repo_dir }}/scripts/disk-health-check/disk_health_check.sh >> {{ maintenance_log_file }} 2>&1
+0 2 * * * root {{ repo_dir }}/scripts/docker-pull-and-run/docker_pull_and_run.sh
+0 3 * * 0 root {{ repo_dir }}/scripts/docker-backup/docker_backup.sh >> {{ maintenance_log_file }} 2>&1
+*/5 * * * * root {{ repo_dir }}/scripts/docker-unhealthy-monitor/docker_unhealthy_monitor.sh
+*/5 * * * * root {{ repo_dir }}/scripts/gluetun-watchdog/gluetun_watchdog.sh >> {{ maintenance_log_file }} 2>&1

@@ -1,0 +1,3 @@
+- name: Refresh package lists for Docker
+  ansible.builtin.apt:
+    update_cache: true

@@ -1,0 +1,5 @@
+# The playbook runs on the server itself: the same command rebuilds a fresh install
+all:
+  hosts:
+    homelab:
+      ansible_connection: local
