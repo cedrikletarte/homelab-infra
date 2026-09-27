@@ -2,7 +2,7 @@ name: multimedia
 services:
   # Plex: Media server software
   plex:
-    image: plexinc/pms-docker
+    image: plexinc/pms-docker:1.43.4.10903-e5521bd8c
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -26,7 +26,7 @@ services:
 
   # Seerr: Media request management and discovery tool
   seerr:
-    image: ghcr.io/seerr-team/seerr:latest
+    image: ghcr.io/seerr-team/seerr:v3.4.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -60,7 +60,7 @@ services:
 
   # Flaresolverr: Proxy server to bypass Cloudflare protection
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -79,7 +79,7 @@ services:
 
   # Gluetun: VPN client container to route traffic through a VPN
   gluetun:
-    image: qmcgaw/gluetun:latest
+    image: qmcgaw/gluetun:latest@sha256:5cedd587404f96202060385d541faa4a73e51544ea098ec8d31c614f4d9c6ee0
     container_name: gluetun
     cap_add:
       - NET_ADMIN
@@ -130,7 +130,7 @@ services:
 
   # qBittorrent: BitTorrent client
   qbittorrent:
-    image: linuxserver/qbittorrent:latest
+    image: linuxserver/qbittorrent:5.2.3_v2.0.15-ls478
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -158,7 +158,7 @@ services:
 
   # Radarr: Movie collection manager
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls318
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -185,7 +185,7 @@ services:
 
   # Sonarr: TV series collection manager
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr:4.0.20.3014-ls325
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -211,7 +211,7 @@ services:
 
   # Lidarr: Music collection manager
   lidarr:
-    image: lscr.io/linuxserver/lidarr:latest
+    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls42
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -237,7 +237,7 @@ services:
 
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr:2.6.5.5623-ls162
     security_opt:
       - no-new-privileges:true
     cap_drop:

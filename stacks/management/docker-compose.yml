@@ -3,7 +3,7 @@ services:
   # Vaultwarden: Self-hosted password manager compatible with Bitwarden clients
   vaultwarden:
     container_name: vaultwarden
-    image: vaultwarden/server:latest
+    image: vaultwarden/server:1.37.3
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -32,7 +32,7 @@ services:
   # Homarr: Dashboard for managing and monitoring services
   homarr:
     container_name: homarr
-    image: ghcr.io/homarr-labs/homarr:latest
+    image: ghcr.io/homarr-labs/homarr:v1.77.2
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -54,7 +54,7 @@ services:
 
   # Portainer: Docker management UI
   portainer:
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce:2.45.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -72,7 +72,7 @@ services:
   # n8n: Workflow automation tool
   n8n:
     container_name: n8n
-    image: docker.n8n.io/n8nio/n8n
+    image: docker.n8n.io/n8nio/n8n:2.40.7
     security_opt:
       - no-new-privileges:true
     cap_drop:

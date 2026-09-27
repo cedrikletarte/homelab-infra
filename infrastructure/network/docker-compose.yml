@@ -2,7 +2,7 @@ services:
   # Cloudflare DDNS: Updates Cloudflare DNS records for VPN access
   cloudflare-ddns:
     container_name: cloudflare-ddns
-    image: favonia/cloudflare-ddns:latest
+    image: favonia/cloudflare-ddns:1.17.1
     restart: always
     user: "1000:1000"
     read_only: true
@@ -19,7 +19,7 @@ services:
 
   # Cloudflared: Cloudflare Tunnel to expose local services securely without opening ports
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.9.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -35,7 +35,7 @@ services:
 
   # WireGuard: VPN server
   wireguard:
-    image: lscr.io/linuxserver/wireguard:latest
+    image: lscr.io/linuxserver/wireguard:1.0.20260223-r0-ls122
     container_name: wireguard
     cap_add:
       - NET_ADMIN
@@ -62,7 +62,7 @@ services:
     restart: always
 
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.6.25
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -88,7 +88,7 @@ services:
       - proxy
 
   crowdsec:
-    image: crowdsecurity/crowdsec:latest
+    image: crowdsecurity/crowdsec:v1.8.1
     security_opt:
       - no-new-privileges:true
     cap_drop:

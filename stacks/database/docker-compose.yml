@@ -3,7 +3,7 @@ services:
   # Postgres: Relational database management system
   postgres:
     container_name: postgres
-    image: postgres:17
+    image: postgres:17.11
     security_opt:
       - no-new-privileges:true
     cap_drop:
