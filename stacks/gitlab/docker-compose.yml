@@ -11,6 +11,10 @@ services:
       GITLAB_OMNIBUS_CONFIG: |
         external_url '${EXTERNAL_URL}'
         gitlab_rails['gitlab_shell_ssh_port'] = 2424
+        # Memory-constrained mode (few users): single Puma process, fewer Sidekiq threads, no bundled Prometheus
+        puma['worker_processes'] = 0
+        sidekiq['concurrency'] = 10
+        prometheus_monitoring['enable'] = false
     ports:
       - '8929:8929'
       - '2424:22'
