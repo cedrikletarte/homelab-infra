@@ -1,8 +1,10 @@
-# Checks every merge request and every push to main; the scheduled pipeline only runs Renovate.
-# Setup (CI/CD variables, pipeline schedule): see the "Updates and CI" section of README.md.
+# Checks every merge request and every push to main, then deploys main once the checks pass;
+# the scheduled pipeline only runs Renovate.
+# Setup (CI/CD variables, pipeline schedule, deploy key): see the "Updates and CI" section of README.md.
 
 stages:
   - validate
+  - deploy
   - renovate
 
 workflow:
@@ -67,6 +69,21 @@ renovate-config:
         - renovate.json
   script:
     - renovate-config-validator --strict
+
+# Starts docker_pull_and_run.sh on the server after every push to main (a merged merge request is one),
+# once the validate stage passed. The deploy key can only run that script: its authorized_keys entry forces
+# a detached `systemd-run --unit=homelab-deploy`, so the deploy goes on even when it recreates GitLab or
+# this runner, and the job ends as soon as it is started. The result comes through the usual notification.
+deploy:
+  stage: deploy
+  image: alpine:3.24.2
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DEPLOY_SSH_KEY && $DEPLOY_TARGET
+  resource_group: production
+  script:
+    - apk add --no-cache openssh-client
+    - chmod 600 "$DEPLOY_SSH_KEY"
+    - ssh -i "$DEPLOY_SSH_KEY" -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o BatchMode=yes "$DEPLOY_TARGET"
 
 # Opens and updates the dependency merge requests. Runs from a pipeline schedule (and only when the
 # token is set), with RENOVATE_TOKEN (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.

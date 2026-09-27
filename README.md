@@ -60,7 +60,7 @@ Every image is pinned to an exact version in its `docker-compose.yml` (`traefik:
 - **Gluetun** publishes no versioned tag matching the development build in use, so it is pinned as `latest@sha256:…` and each new build comes as a digest update
 - **SearXNG** releases almost daily, so its merge request is opened on Saturdays only
 
-A merged update is deployed by `docker_pull_and_run.sh` at its next nightly run: it fast-forwards the server's clone to `main` and runs `docker compose up -d` in every running stack, behind the backup check. To deploy right away, run it by hand. The clone is also the working copy: with local commits not pushed, the script does not merge and reports it instead, so push before the night.
+A merged update is deployed by `docker_pull_and_run.sh`: it fast-forwards the server's clone to `main` and runs `docker compose up -d` in every running stack, behind the backup check. The `deploy` job starts it over SSH as soon as a push to `main` (a merged merge request) passed the checks, and the nightly cron run catches anything a failed deploy left behind. The clone is also the working copy: with local commits not pushed, the script does not merge and reports it instead, so push your commits.
 
 The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `main`:
 
@@ -70,6 +70,7 @@ The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `m
 | `shellcheck` | Every shell script, at `warning` severity |
 | `gitleaks` | The whole git history for secrets |
 | `renovate-config` | `renovate.json`, only when it changes |
+| `deploy` | Nothing: starts the deploy on the server, only on a push to `main` and once the jobs above passed |
 
 The `renovate` job runs only from a pipeline schedule.
 
@@ -81,6 +82,27 @@ The `renovate` job runs only from a pipeline schedule.
 4. In *Build > Pipeline schedules*, add a schedule on `main`, for example `0 1 * * *` (01:00, before `docker_pull_and_run.sh`)
 5. Check that the runner picks untagged jobs (*Settings > CI/CD > Runners*, edit the runner, *Run untagged jobs*)
 6. Optional, for automerge: *Settings > Merge requests*, enable *Pipelines must succeed*
+
+### One-time setup of the deploy on merge
+
+The `deploy` job only runs once `DEPLOY_SSH_KEY` and `DEPLOY_TARGET` exist. Its key can run nothing but the deploy script, as root, detached from the SSH session. Below, `<clone>` is the absolute path of this repo on the server and `<user>` the account that owns it.
+
+1. On the server, as `<user>`: `ssh-keygen -t ed25519 -N '' -C gitlab-deploy -f ~/.ssh/homelab_deploy`
+2. Append to `~/.ssh/authorized_keys`, followed by the content of `~/.ssh/homelab_deploy.pub`:
+   ```
+   restrict,command="sudo -n /usr/bin/systemd-run --unit=homelab-deploy --collect /usr/bin/bash <clone>/scripts/docker-pull-and-run/docker_pull_and_run.sh"
+   ```
+3. `sudo visudo -f /etc/sudoers.d/homelab-deploy`, with the same command, character for character:
+   ```
+   <user> ALL=(root) NOPASSWD: /usr/bin/systemd-run --unit=homelab-deploy --collect /usr/bin/bash <clone>/scripts/docker-pull-and-run/docker_pull_and_run.sh
+   ```
+4. Test from the server: `ssh -i ~/.ssh/homelab_deploy <user>@<server LAN address>` starts a deploy, `journalctl -u homelab-deploy -f` follows it
+5. In *Settings > CI/CD > Variables*, all **Protected**:
+   - `DEPLOY_SSH_KEY`, type **File**: the content of `~/.ssh/homelab_deploy` (the private key)
+   - `DEPLOY_KNOWN_HOSTS`, type **File**: the output of `ssh-keyscan -t ed25519 <server LAN address>`
+   - `DEPLOY_TARGET`, type Variable: `<user>@<server LAN address>`
+
+A second deploy started while one runs is refused by `systemd-run` (the unit exists), so deploys never overlap. Anyone who can push or merge to `main` can run code as root on the server through this job (the script itself is in the repo), as the nightly cron already allowed: keep `main` protected.
 
 ---
 
