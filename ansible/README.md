@@ -14,7 +14,7 @@ The playbook runs on the server against itself (`ansible_connection: local`), so
 | `samba` | `smb.conf` with the shares from `samba_shares`. Samba passwords are not managed: `sudo smbpasswd -a <user>` after a fresh install |
 | `maintenance` | SMART monitoring with scheduled self-tests, Webmin and its repository, and the maintenance scripts' schedule in `/etc/cron.d/homelab-infra`, their output going to the journal (`journalctl -t <script>`) |
 
-The ufw rules only list services listening on the host itself: ports published by Docker bypass ufw (Docker's iptables rules come first), so a rule for them would have no effect. The `ufw` module only adds rules, it never removes the ones it does not know.
+The ufw rules only list services listening on the host itself: ports published by Docker bypass ufw (Docker's iptables rules come first), so a rule for them would have no effect. The `ufw` module only adds rules, it never removes the ones it does not know. `ufw_silent_drops` denies known LAN broadcasts (a TV box announcing itself every few seconds) with an explicit rule, which keeps them out of `ufw.log`: its rate limit is shared by every blocked packet.
 
 Tags select a part of the playbook: one per role (`base`, `security`, `docker`, `samba`, `maintenance`), plus `firewall`, `deploy_key`, `smart`, `webmin` and `cron`. On a fresh install the deploy key is generated again: put the new private key in the `DEPLOY_SSH_KEY` CI/CD variable (root README, "One-time setup of the deploy on merge").
 

@@ -57,6 +57,21 @@
     comment: Plex Media Server
   tags: [firewall]
 
+# Some LAN devices announce themselves to a multicast group every few seconds. Denying them with an
+# explicit rule keeps them out of ufw.log: the log rate limit is shared by every blocked packet, so
+# this noise could hide a real blocked attempt.
+- name: Known LAN broadcasts dropped without logging
+  community.general.ufw:
+    rule: deny
+    direction: in
+    proto: "{{ item.proto }}"
+    from_ip: "{{ item.from }}"
+    to_ip: "{{ item.to }}"
+    port: "{{ item.port }}"
+    comment: "{{ item.name }}"
+  loop: "{{ ufw_silent_drops | default([]) }}"
+  tags: [firewall]
+
 - name: Firewall enabled
   community.general.ufw:
     state: enabled
