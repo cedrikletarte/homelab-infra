@@ -34,10 +34,10 @@ cp .env.exemple .env
 sudo bash disk_health_check.sh
 ```
 
-Recommended as a cron job, e.g. daily:
+Scheduled by the Ansible `maintenance` role (daily at 02:00, as root, in `/etc/cron.d/homelab-infra`). Its output goes to the journal:
 
-```cron
-0 6 * * * /usr/bin/sudo /home/cedrik/homelab-infra/scripts/disk-health-check/disk_health_check.sh
+```bash
+journalctl -t disk_health_check --since today
 ```
 
 ## Notification behavior

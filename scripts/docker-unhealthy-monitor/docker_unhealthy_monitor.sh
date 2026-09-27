@@ -2,8 +2,7 @@
 # =============================================================================
 # docker_unhealthy_monitor.sh — Monitor containers and auto-restart unhealthy ones
 # Replaces n8n workflow "docker unhealthy monitoring" (SSH-based)
-# Run via cron every 5 minutes:
-#   */5 * * * * /home/cedrik/homelab-infra/scripts/docker-unhealthy-monitor/docker_unhealthy_monitor.sh
+# Run every 5 minutes by cron (ansible/roles/maintenance), output in the journal
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

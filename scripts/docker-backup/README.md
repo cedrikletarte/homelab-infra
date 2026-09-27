@@ -97,6 +97,12 @@ rm -rf /tmp/crypt-test /tmp/crypt-restore
 sudo bash docker_backup.sh
 ```
 
+Scheduled by the Ansible `maintenance` role (Sundays at 03:00, as root, in `/etc/cron.d/homelab-infra`). The output of a scheduled run goes to the journal, the only trace left when the notification cannot be sent:
+
+```bash
+journalctl -t docker_backup --since "last sunday"
+```
+
 Then check:
 - The console prints all 5 steps up to `===== Script docker backup END`
 - The Discord notification shows `☁️ OneDrive (encrypted)` and `✅ Backup completed without errors`

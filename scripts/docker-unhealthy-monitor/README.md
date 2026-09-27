@@ -31,10 +31,10 @@ cp .env.exemple .env
 
 ## Running the script
 
-Intended to run on a schedule via cron, e.g. every 5 minutes:
+Scheduled by the Ansible `maintenance` role (every 5 minutes, as root, in `/etc/cron.d/homelab-infra`). Its output goes to the journal:
 
-```cron
-*/5 * * * * /home/cedrik/homelab-infra/scripts/docker-unhealthy-monitor/docker_unhealthy_monitor.sh
+```bash
+journalctl -t docker_unhealthy_monitor --since today
 ```
 
 ## Notification behavior

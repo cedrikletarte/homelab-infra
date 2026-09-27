@@ -50,7 +50,7 @@ The guarantee is that a backup no older than a week exists, not that one was tak
 ## Running the script
 
 ```bash
-sudo bash docker_pull_and_run.sh            # what cron runs
+sudo bash docker_pull_and_run.sh            # what cron runs (output: journalctl -t docker_pull_and_run)
 bash docker_pull_and_run.sh --dry-run       # show what would happen: no merge, no container change, no notification
 ```
 

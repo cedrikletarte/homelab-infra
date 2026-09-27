@@ -46,10 +46,10 @@ sudo ./gluetun_watchdog.sh              # real run
 sudo DRY_RUN=1 ./gluetun_watchdog.sh    # log what it would do, change nothing
 ```
 
-Intended to run on a schedule via cron, e.g. every 5 minutes:
+Scheduled by the Ansible `maintenance` role (every 5 minutes, as root, in `/etc/cron.d/homelab-infra`). Its output goes to the journal:
 
-```cron
-*/5 * * * * /home/cedrik/homelab-infra/scripts/gluetun-watchdog/gluetun_watchdog.sh >> /home/cedrik/logfile.log 2>&1
+```bash
+journalctl -t gluetun_watchdog --since today
 ```
 
 ## Notification behavior

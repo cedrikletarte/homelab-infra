@@ -4,7 +4,7 @@
 # When a gluetun container stays unhealthy while the host is online, its PIA
 # server was retired or its key dropped: register a new key, update
 # SERVER_NAMES and recreate gluetun + the containers sharing its network.
-# Run via cron every 5 minutes (as root).
+# Run every 5 minutes as root by cron (ansible/roles/maintenance), output in the journal.
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
