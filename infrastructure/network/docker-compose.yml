@@ -19,7 +19,7 @@ services:
 
   # Cloudflared: Cloudflare Tunnel to expose local services securely without opening ports
   cloudflared:
-    image: cloudflare/cloudflared:2026.9.1
+    image: cloudflare/cloudflared:2026.9.3
     security_opt:
       - no-new-privileges:true
     cap_drop:
