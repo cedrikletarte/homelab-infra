@@ -62,7 +62,7 @@ gitleaks:
 
 renovate-config:
   extends: .validate
-  image: ghcr.io/renovatebot/renovate:44.115.13
+  image: ghcr.io/renovatebot/renovate:44.117.2
   rules:
     - if: $CI_PIPELINE_SOURCE != "schedule"
       changes:
@@ -91,7 +91,7 @@ deploy:
 # token is set), with RENOVATE_TOKEN (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.
 renovate:
   stage: renovate
-  image: ghcr.io/renovatebot/renovate:44.115.13
+  image: ghcr.io/renovatebot/renovate:44.117.2
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN
   variables:
