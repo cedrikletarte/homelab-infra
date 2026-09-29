@@ -10,7 +10,7 @@ traefik.yml
 middlewares.yml
 
 # -- SearXNG --
-settings.yml
+stacks/searxng/core-config/settings.yml
 
 # -- Folder --
 stacks-unused

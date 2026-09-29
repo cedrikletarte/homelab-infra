@@ -1,0 +1,70 @@
+{
+  "trash_id": "6ec9b031bbb4eb404d3957a2fed107e3",
+  "name": "MULTI KEYWORDS",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "MULTI",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bMULTI\\b"
+      }
+    },
+    {
+      "name": "MULTi",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bMULTi\\b"
+      }
+    },
+    {
+      "name": "DUAL",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bDUAL\\b"
+      }
+    },
+    {
+      "name": "DUAL-AUDIO",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bDUAL-AUDIO\\b"
+      }
+    },
+    {
+      "name": "TRUEFRENCH",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bTRUEFRENCH\\b"
+      }
+    },
+    {
+      "name": "VFF",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bVFF\\b"
+      }
+    },
+    {
+      "name": "VF2",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bVF2\\b"
+      }
+    }
+  ]
+}

@@ -259,6 +259,30 @@ services:
     networks:
       - internal
 
+  # Recyclarr: Syncs custom formats and their scores to Radarr and Sonarr (daily)
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:8.7.2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    container_name: recyclarr
+    environment:
+      - TZ=${TZ}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+    volumes:
+      - recyclarr:/config
+      - ./recyclarr/recyclarr.yml:/config/recyclarr.yml:ro
+      - ./recyclarr/settings.yml:/config/settings.yml:ro
+      - ./recyclarr/custom-formats:/config/custom-formats:ro
+    restart: unless-stopped
+    networks:
+      - internal
+    depends_on:
+      - radarr
+      - sonarr
+
 
 volumes:
   gluetun:
@@ -290,6 +314,9 @@ volumes:
     external: true
   flaresolverr:
     name: flaresolverr
+    external: true
+  recyclarr:
+    name: recyclarr
     external: true
 
 networks:

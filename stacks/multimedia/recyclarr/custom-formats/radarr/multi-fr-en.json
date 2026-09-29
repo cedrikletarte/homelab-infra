@@ -1,0 +1,27 @@
+{
+  "trash_id": "a39b4e06388f17fe8171747f765c660f",
+  "name": "MULTI FR+EN",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "FR",
+      "implementation": "LanguageSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "value": 2,
+        "exceptLanguage": false
+      }
+    },
+    {
+      "name": "EN",
+      "implementation": "LanguageSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "value": 1,
+        "exceptLanguage": false
+      }
+    }
+  ]
+}

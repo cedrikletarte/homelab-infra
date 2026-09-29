@@ -1,0 +1,34 @@
+{
+  "trash_id": "de8a8d56b70895173512825933812ad9",
+  "name": "x265 - HEVC",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "x265",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "x265"
+      }
+    },
+    {
+      "name": "HEVC",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "HEVC"
+      }
+    },
+    {
+      "name": "H.265",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "\\bH[ .]?265\\b"
+      }
+    }
+  ]
+}

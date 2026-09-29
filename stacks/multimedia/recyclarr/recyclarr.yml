@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://schemas.recyclarr.dev/v8/config-schema.json
+#
+# Custom formats and their scores in the Radarr/Sonarr quality profiles.
+# Recyclarr owns everything listed here: an edit made in the Radarr/Sonarr UI to one of these
+# custom formats or scores is overwritten at the next sync (daily). Edit this file instead.
+#
+# The profiles are referenced by name only, so their qualities, cutoff and upgrade settings stay
+# as set in the UI: the quality always wins, the custom format score only breaks ties.
+#
+# Homemade custom formats (MULTI, HDR10, x265) live in custom-formats/, the others come from
+# TRaSH Guides (https://trash-guides.info). Their trash_id is in the file name of
+# https://github.com/TRaSH-Guides/Guides/tree/master/docs/json/radarr/cf (or sonarr/cf).
+
+radarr:
+  radarr:
+    base_url: http://radarr:7878
+    api_key: !env_var RADARR_API_KEY
+
+    quality_profiles:
+      - name: HD-1080p
+        reset_unmatched_scores:
+          enabled: true
+      - name: Ultra-HD
+        reset_unmatched_scores:
+          enabled: true
+
+    custom_formats:
+      # French audio: a tie-breaker between releases of the same quality
+      - trash_ids:
+          - 6ec9b031bbb4eb404d3957a2fed107e3  # MULTI KEYWORDS
+          - a39b4e06388f17fe8171747f765c660f  # MULTI FR+EN
+        score: 1000
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      - trash_ids:
+          - de8a8d56b70895173512825933812ad9  # x265 - HEVC
+        score: 100
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      - trash_ids:
+          - ec1aec5babea11afa1ca3c014a0c87ea  # HDR10
+        score: 50
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      # Rejected (TRaSH score -10000, below the profiles' minimum score of 0)
+      - trash_ids:
+          - 923b6abef9b17f937fab56cfcf89e1f1  # DV (w/o HDR fallback): no HDR10 layer, Plex would have to transcode
+          - ed38b889b31be83fda192888e2286d83  # BR-DISK
+          - 90a6f9a284dff5103f6346090e6280c8  # LQ
+          - e204b80c87be9497a8a6eaff48f72905  # LQ (Release Title)
+          - 48f031e76111f17ea94898f4cdc34fdc  # FR LQ
+          - b8cd450cbfa689c0259a01d9e29ba3d6  # 3D
+          - 0a3f082873eb454bde444150b70253cc  # Extras
+          - bfd8eb01832d646a0a89c4deb46f8564  # Upscaled
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+sonarr:
+  sonarr:
+    base_url: http://sonarr:8989
+    api_key: !env_var SONARR_API_KEY
+
+    quality_profiles:
+      - name: HD-1080p
+        reset_unmatched_scores:
+          enabled: true
+      - name: Ultra-HD
+        reset_unmatched_scores:
+          enabled: true
+
+    custom_formats:
+      # French audio: a tie-breaker between releases of the same quality
+      - trash_ids:
+          - 2e6614d5b89015d954eea11a18f9b90d  # MULTI KEYWORDS
+          - 5bebaf68a1dfe7b77133bb6342243371  # MULTI FR+EN
+        score: 1000
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      - trash_ids:
+          - 3144bb62ab74d72b4124594cc1b00cec  # x265 - HEVC
+        score: 100
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      - trash_ids:
+          - 705b5c60698371b7ce809248cf6e8371  # HDR10
+        score: 50
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      # Rejected (TRaSH score -10000, below the profiles' minimum score of 0)
+      - trash_ids:
+          - 9b27ab6498ec0f31a3353992e19434ca  # DV (w/o HDR fallback): no HDR10 layer, Plex would have to transcode
+          - 85c61753df5da1fb2aab6f2a47426b09  # BR-DISK
+          - 9c11cd3f07101cdba90a2d81cf0e56b4  # LQ
+          - e2315f990da2e2cbfc9fa5b7a6fcfe48  # LQ (Release Title)
+          - 3ba797e5dc13af4b8d9bb25e83d90de2  # FR LQ
+          - fbcb31d8dabd2a319072b84fc0b7249c  # Extras
+          - 23297a736ca77c0fc8e70f8edd7ee56c  # Upscaled
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
