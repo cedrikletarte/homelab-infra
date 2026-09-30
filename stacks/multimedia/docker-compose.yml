@@ -130,7 +130,7 @@ services:
 
   # qBittorrent: BitTorrent client
   qbittorrent:
-    image: linuxserver/qbittorrent:5.2.3_v2.0.15-ls478
+    image: linuxserver/qbittorrent:5.2.4_v2.0.15-ls479
     security_opt:
       - no-new-privileges:true
     cap_drop:
