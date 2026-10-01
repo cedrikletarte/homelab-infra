@@ -24,7 +24,7 @@ workflow:
 # (an empty path would make a volume spec invalid). A variable missing from the example only warns.
 compose-config:
   extends: .validate
-  image: docker:29.8.1-cli
+  image: docker:29.8.2-cli
   script:
     - |
       status=0
