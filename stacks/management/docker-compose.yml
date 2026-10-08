@@ -3,7 +3,7 @@ services:
   # Vaultwarden: Self-hosted password manager compatible with Bitwarden clients
   vaultwarden:
     container_name: vaultwarden
-    image: vaultwarden/server:1.37.3
+    image: vaultwarden/server:1.37.4
     security_opt:
       - no-new-privileges:true
     cap_drop:
