@@ -54,7 +54,7 @@ services:
 
   # Portainer: Docker management UI
   portainer:
-    image: portainer/portainer-ce:2.45.1
+    image: portainer/portainer-ce:2.45.2
     security_opt:
       - no-new-privileges:true
     cap_drop:
