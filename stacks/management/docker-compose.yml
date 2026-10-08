@@ -32,7 +32,7 @@ services:
   # Homarr: Dashboard for managing and monitoring services
   homarr:
     container_name: homarr
-    image: ghcr.io/homarr-labs/homarr:v2.1.2
+    image: ghcr.io/homarr-labs/homarr:v2.3.0
     security_opt:
       - no-new-privileges:true
     cap_drop:
