@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     shm_size: 128mb
     ports:
-      - '192.168.2.120:5432:5432'
+      - '${LAN_IP:?set LAN_IP in .env}:5432:5432'
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

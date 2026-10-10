@@ -75,7 +75,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "192.168.2.120:8181:8080" # dashboard: LAN IP only, not all interfaces
+      - "${LAN_IP:?set LAN_IP in .env}:8181:8080" # dashboard: LAN IP only, not all interfaces
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
