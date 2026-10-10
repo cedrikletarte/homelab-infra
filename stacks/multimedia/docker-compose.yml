@@ -283,6 +283,33 @@ services:
       - radarr
       - sonarr
 
+  # VO approval: asks on Discord before a movie/series is downloaded without French and English audio
+  vo-approval:
+    build: ./vo-approval
+    image: homelab/vo-approval:local
+    pull_policy: build # rebuilt by every `up`: a code change redeploys, no change is a cached no-op
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    container_name: vo-approval
+    environment:
+      - TZ=${TZ}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
+      - DISCORD_APPROVER_IDS=${DISCORD_APPROVER_IDS}
+    volumes:
+      - vo_approval:/data
+    restart: unless-stopped
+    networks:
+      - internal
+    depends_on:
+      - radarr
+      - sonarr
+
 
 volumes:
   gluetun:
@@ -317,6 +344,9 @@ volumes:
     external: true
   recyclarr:
     name: recyclarr
+    external: true
+  vo_approval:
+    name: vo_approval
     external: true
 
 networks:

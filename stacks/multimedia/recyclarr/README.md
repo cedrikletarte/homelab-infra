@@ -10,9 +10,10 @@ The other custom formats (DV without HDR fallback, BR-DISK, LQ, ...) come from [
 
 ## How the ranking works
 
-- The quality profiles (`HD-1080p`, `Ultra-HD`) are referenced by name only: their qualities, cutoff and upgrade settings are still set in the Radarr/Sonarr UI, and Recyclarr leaves them alone.
-- The quality always wins. The custom format score only decides between releases of the same quality: French audio +1000, x265 +100, HDR10 +50.
-- A score of -10000 rejects the release (the profiles' minimum score is 0). This covers the known bad releases and Dolby Vision without an HDR10 layer, which only plays by transcoding and the server CPU cannot transcode 4K.
+- The quality profiles (`HD-1080p`, `Ultra-HD` and their `VO` twins) are referenced by name only: their qualities, cutoff and upgrade settings are still set in the Radarr/Sonarr UI, and Recyclarr leaves them alone.
+- French and English audio are required: `HD-1080p` and `Ultra-HD` have a minimum score of 5000, which only `MULTI FR+EN` (+5000) reaches. Their `VO` twins (minimum 0) accept any language; [vo-approval](../vo-approval/README.md) moves a movie/series there once allowed on Discord.
+- Among the accepted releases the quality always wins. The other scores only decide between releases of the same quality: MULTi/VFF/TRUEFRENCH in the title +1000, x265 +100, HDR10 +50.
+- A score of -10000 rejects the release in every profile, whatever the bonuses. This covers the known bad releases and Dolby Vision without an HDR10 layer, which only plays by transcoding and the server CPU cannot transcode 4K.
 
 ## Rules
 
