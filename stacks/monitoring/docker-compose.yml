@@ -1,0 +1,151 @@
+name: monitoring
+services:
+  # Grafana: dashboards and alerts. Admin tool, so Private Access only (ADR 0002).
+  # Its own settings live in the Shared Database (database grafana, ADR 0004).
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss:13.0.2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    ports:
+      - "${LAN_IP:?set LAN_IP in .env}:3000:3000"
+    environment:
+      - TZ=${TZ}
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=grafana
+      - GF_DATABASE_PASSWORD=${GRAFANA_DB_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+      - GF_NEWS_NEWS_FEED_ENABLED=false
+      # Only built-in data sources are used: no plugin download or auto-update at start
+      - GF_PLUGINS_PREINSTALL_DISABLED=true
+      # Read by the provisioning files
+      - HOMELAB_ALERTS_READER_PASSWORD=${HOMELAB_ALERTS_READER_PASSWORD}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+      - db_network
+
+  # Prometheus: scrapes the exporters below, Traefik and CrowdSec (on the proxy network)
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.15.0
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=5GB
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - monitoring
+      - proxy
+
+  # node-exporter: host metrics (CPU, memory, disks, network). On the host network to see the real
+  # interfaces, listening only on the monitoring network's gateway: unreachable from the LAN.
+  # ufw lets that network reach it (ansible security role).
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:v1.12.1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=172.31.0.1:9100
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run|sys|var/lib/docker/.+|snap/.+)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+
+  # cAdvisor: per-container CPU, memory and network. Tuned down for an old CPU.
+  cadvisor:
+    container_name: cadvisor
+    image: ghcr.io/google/cadvisor:v0.60.6
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service
+      - --disable_metrics=advtcp,cpuset,cpu_topology,disk,hugetlb,memory_numa,percpu,process,referenced_memory,resctrl,sched,tcp,udp
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - monitoring
+
+  # smartctl-exporter: SMART health and temperature of the disks. Skips a disk in standby
+  # instead of waking it up.
+  smartctl-exporter:
+    container_name: smartctl-exporter
+    image: prometheuscommunity/smartctl-exporter:v0.15.0
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_RAWIO
+    user: root
+    restart: unless-stopped
+    command:
+      - --smartctl.interval=300s
+      - --smartctl.powermode-check=standby
+    devices:
+      - /dev/sda
+      - /dev/sdb
+    networks:
+      - monitoring
+
+volumes:
+  grafana-data:
+    name: grafana-data
+    external: true
+  prometheus-data:
+    name: prometheus-data
+    external: true
+
+networks:
+  # Pinned: node-exporter listens on its gateway and the ufw rule allows its subnet
+  monitoring:
+    name: monitoring
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+          gateway: 172.31.0.1
+  proxy:
+    external: true
+  db_network:
+    external: true

@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Host metrics: node-exporter listens on the monitoring network's gateway (host network)
+  - job_name: node
+    static_configs:
+      - targets: ["172.31.0.1:9100"]
+        labels:
+          instance: homelab
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: smartctl
+    static_configs:
+      - targets: ["smartctl-exporter:9633"]
+
+  # On the proxy network. Traefik serves its metrics on its internal API entry point (traefik.yml).
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8080"]
+
+  - job_name: crowdsec
+    static_configs:
+      - targets: ["crowdsec:6060"]

@@ -1,0 +1,220 @@
+# Contact point, notification policy and alert rules, all sent to the Discord channel of the
+# n8n notifications. Annotation templates use .Labels and .Values: a $ would be read as an
+# environment variable by the provisioning.
+apiVersion: 1
+contactPoints:
+- orgId: 1
+  name: discord
+  receivers:
+  - uid: discord
+    type: discord
+    settings:
+      url: $DISCORD_WEBHOOK_URL
+      use_discord_username: false
+policies:
+- orgId: 1
+  receiver: discord
+  group_by:
+  - alertname
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+groups:
+- orgId: 1
+  name: homelab
+  folder: Homelab
+  interval: 1m
+  rules:
+  - uid: backup-stale
+    title: No successful backup for 8 days
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: homelab-alerts
+      model:
+        refId: A
+        editorMode: code
+        rawQuery: true
+        format: table
+        rawSql: SELECT COALESCE(EXTRACT(EPOCH FROM now() - max(created_at)) / 86400, 999) AS days FROM homelab_alerts WHERE source = 'docker_backup' AND status = 'ok'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 8
+    noDataState: Alerting
+    execErrState: Error
+    for: 0s
+    annotations:
+      summary: 'The last backup that reported ok is {{ printf "%.1f" (index .Values "A").Value }} days old: the weekly backup was missed or failed. Check `journalctl -t docker_backup`.'
+    labels:
+      severity: critical
+  - uid: disk-space-high
+    title: Disk almost full
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: prometheus
+      model:
+        refId: A
+        expr: 100 * (1 - node_filesystem_avail_bytes{fstype="ext4"} / node_filesystem_size_bytes{fstype="ext4"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 85
+    noDataState: OK
+    execErrState: Error
+    for: 30m
+    annotations:
+      summary: '{{ index .Labels "mountpoint" }} is {{ printf "%.0f" (index .Values "A").Value }}% full.'
+    labels:
+      severity: warning
+  - uid: memory-low
+    title: Memory almost exhausted
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: prometheus
+      model:
+        refId: A
+        expr: 100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 10
+    noDataState: OK
+    execErrState: Error
+    for: 15m
+    annotations:
+      summary: Only {{ printf "%.0f" (index .Values "A").Value }}% of the memory is available.
+    labels:
+      severity: warning
+  - uid: smart-failed
+    title: Disk SMART health check failed
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: prometheus
+      model:
+        refId: A
+        expr: smartctl_device_smart_status
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+    noDataState: OK
+    execErrState: Error
+    for: 0s
+    annotations:
+      summary: '{{ index .Labels "device" }} ({{ index .Labels "model_name" }}) reports a failed SMART health check: back up and replace it.'
+    labels:
+      severity: critical
+  - uid: disk-hot
+    title: Disk too hot
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: prometheus
+      model:
+        refId: A
+        expr: smartctl_device_temperature{temperature_type="current"}
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 55
+    noDataState: OK
+    execErrState: Error
+    for: 15m
+    annotations:
+      summary: '{{ index .Labels "device" }} is at {{ printf "%.0f" (index .Values "A").Value }} °C.'
+    labels:
+      severity: warning
+  - uid: target-down
+    title: Metrics source down
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: prometheus
+      model:
+        refId: A
+        expr: up
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: 'Prometheus cannot scrape {{ index .Labels "job" }} ({{ index .Labels "instance" }}): its dashboards and alerts are blind.'
+    labels:
+      severity: warning
