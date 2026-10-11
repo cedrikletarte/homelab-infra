@@ -27,7 +27,7 @@ Provisioned from `grafana/dashboards/<folder>/*.json`, one Grafana folder per di
 
 The downloaded dashboards were edited only to point at the provisioned Prometheus data source (uid `prometheus`) instead of asking for one at import.
 
-`homelab_alerts` is read with `grafana_reader`, an account that can only `SELECT` that table.
+`homelab_alerts` (database `homelab` of the Shared Database) is read with `grafana_reader`, an account that can only `SELECT` that table.
 
 ## Alerts
 
@@ -54,8 +54,8 @@ In the Shared Database, as its superuser, the read-only account of the `homelab_
 
 ```sql
 CREATE ROLE grafana_reader LOGIN PASSWORD '<HOMELAB_ALERTS_READER_PASSWORD>';
--- then, connected to the n8n database:
-GRANT CONNECT ON DATABASE n8n TO grafana_reader;
+GRANT CONNECT ON DATABASE homelab TO grafana_reader;
+-- then, connected to the homelab database:
 GRANT USAGE ON SCHEMA public TO grafana_reader;
 GRANT SELECT ON public.homelab_alerts TO grafana_reader;
 ```

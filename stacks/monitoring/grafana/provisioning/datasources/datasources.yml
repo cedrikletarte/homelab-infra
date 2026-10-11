@@ -18,7 +18,7 @@ datasources:
     url: postgres:5432
     user: grafana_reader
     jsonData:
-      database: n8n
+      database: homelab
       sslmode: disable
       postgresVersion: 1700
     secureJsonData:
