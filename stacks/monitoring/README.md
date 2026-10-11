@@ -4,7 +4,7 @@ Dashboards and alerts for the server, the containers, the web traffic and the re
 
 | Service | Role |
 |---|---|
-| `grafana` | Dashboards and alert rules. Its own settings live in the Shared Database (database `grafana`) |
+| `grafana` | Dashboards and alert rules. Its own settings stay in SQLite in the `grafana-data` volume, so that the alerts keep working when the Shared Database is down |
 | `prometheus` | Scrapes the sources below every 30 s, keeps 30 days (5 GB at most) |
 | `node-exporter` | Host CPU, memory, disks and network. Host network, listening on the monitoring network's gateway only |
 | `cadvisor` | CPU, memory and network per container |
@@ -50,11 +50,9 @@ docker volume create grafana-data
 docker volume create prometheus-data
 ```
 
-In the Shared Database, as its superuser:
+In the Shared Database, as its superuser, the read-only account of the `homelab_alerts` data source:
 
 ```sql
-CREATE ROLE grafana LOGIN PASSWORD '<GRAFANA_DB_PASSWORD>';
-CREATE DATABASE grafana OWNER grafana;
 CREATE ROLE grafana_reader LOGIN PASSWORD '<HOMELAB_ALERTS_READER_PASSWORD>';
 -- then, connected to the n8n database:
 GRANT CONNECT ON DATABASE n8n TO grafana_reader;
