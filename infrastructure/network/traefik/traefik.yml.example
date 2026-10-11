@@ -2,6 +2,13 @@ api:
   dashboard: true
   insecure: true
 
+# Prometheus metrics on the internal API entry point (port 8080, reached by Prometheus on the proxy network)
+metrics:
+  prometheus:
+    entryPoint: traefik
+    addRoutersLabels: true
+    addServicesLabels: true
+
 entryPoints:
   web:
     address: ":80"

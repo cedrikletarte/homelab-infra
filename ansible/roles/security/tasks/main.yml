@@ -57,6 +57,18 @@
     comment: Plex Media Server
   tags: [firewall]
 
+# node-exporter runs on the host network and listens on the monitoring network's gateway
+# (stacks/monitoring): Prometheus reaches it from that network, nothing else does.
+- name: Prometheus can scrape node-exporter
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    from_ip: "{{ security_monitoring_subnet }}"
+    to_ip: "{{ security_monitoring_gateway }}"
+    port: "9100"
+    comment: prometheus to node-exporter
+  tags: [firewall]
+
 # Some LAN devices announce themselves to a multicast group every few seconds. Denying them with an
 # explicit rule keeps them out of ufw.log: the log rate limit is shared by every blocked packet, so
 # this noise could hide a real blocked attempt.

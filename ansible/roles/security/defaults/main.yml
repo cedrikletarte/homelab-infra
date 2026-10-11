@@ -3,3 +3,7 @@ security_deploy_command: >-
   /usr/bin/systemd-run --unit=homelab-deploy --collect /usr/bin/bash
   {{ repo_dir }}/scripts/docker-pull-and-run/docker_pull_and_run.sh
 security_deploy_key: "/home/{{ admin_user }}/.ssh/homelab_deploy"
+
+# Pinned in stacks/monitoring/docker-compose.yml (network monitoring)
+security_monitoring_subnet: 172.31.0.0/24
+security_monitoring_gateway: 172.31.0.1

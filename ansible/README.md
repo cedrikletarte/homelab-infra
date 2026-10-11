@@ -9,7 +9,7 @@ The playbook runs on the server against itself (`ansible_connection: local`), so
 | Role | Covers |
 |---|---|
 | `base` | Hostname, timezone, `media` user and group, groups of the admin user, static address (netplan), data disk mounted by UUID, swap file, SSH hardening, unattended upgrades |
-| `security` | ufw (default policies; SSH, Samba and Webmin from the trusted networks; Plex), the sudoers rule and the restricted `authorized_keys` entry of the CI deploy key |
+| `security` | ufw (default policies; SSH, Samba and Webmin from the trusted networks; Plex; Prometheus to node-exporter from the monitoring network), the sudoers rule and the restricted `authorized_keys` entry of the CI deploy key |
 | `docker` | Docker's apt repository for the running Ubuntu release, the engine and compose plugin (installed, never upgraded by the playbook: an engine upgrade restarts every container), the admin user in the `docker` group |
 | `samba` | `smb.conf` with the shares from `samba_shares`. Samba passwords are not managed: `sudo smbpasswd -a <user>` after a fresh install |
 | `maintenance` | SMART monitoring with scheduled self-tests, Webmin and its repository, and the maintenance scripts' schedule in `/etc/cron.d/homelab-infra`, their output going to the journal (`journalctl -t <script>`) |
