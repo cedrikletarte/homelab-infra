@@ -81,7 +81,7 @@ The `renovate` job runs only from a pipeline schedule.
 2. Create a GitHub personal access token (fine-grained, public repositories read-only, no permission needed): Renovate uses it to read release notes without hitting GitHub's anonymous rate limit
 3. In *Settings > CI/CD > Variables*, add `RENOVATE_TOKEN` (the bot token) and `GITHUB_COM_TOKEN`, both **Masked** and **Protected**
 4. In *Build > Pipeline schedules*, add a schedule on `main`, for example `0 1 * * *` (01:00, before `docker_pull_and_run.sh`)
-5. Check that the runner picks untagged jobs (*Settings > CI/CD > Runners*, edit the runner, *Run untagged jobs*)
+5. Check that the runner picks untagged jobs (*Settings > CI/CD > Runners*, edit the runner, *Run untagged jobs*). This shared runner does not mount the Docker socket (`volumes = ["/cache"]` in its `config.toml`): a job with the socket is root on the server, and no job of this repo needs it (`docker compose config` works without a daemon). Only the portfolio's build, deploy and scan jobs get it, through a second runner tagged `docker-host`, protected and locked to that project
 6. Optional, for automerge: *Settings > Merge requests*, enable *Pipelines must succeed*
 
 ### One-time setup of the deploy on merge
