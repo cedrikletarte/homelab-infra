@@ -21,7 +21,8 @@ workflow:
 
 # docker compose config on every stack. The real .env files are not in git, so each stack is checked
 # against its committed .env.exemple / .env.example, with a placeholder for the values left empty there
-# (an empty path would make a volume spec invalid). A variable missing from the example only warns.
+# (an empty path would make a volume spec invalid). LAN_IP gets a documentation address (RFC 5737) instead,
+# since a port is only published on an IP. A variable missing from the example only warns.
 compose-config:
   extends: .validate
   image: docker:29.9.2-cli
@@ -31,7 +32,7 @@ compose-config:
       for file in $(find infrastructure stacks deployments -name docker-compose.yml | sort); do
         dir=$(dirname "$file")
         for example in "$dir/.env.exemple" "$dir/.env.example"; do
-          [ -f "$example" ] && [ ! -f "$dir/.env" ] && sed 's/^\([A-Za-z0-9_]*\)=$/\1=.\/ci-placeholder/' "$example" > "$dir/.env"
+          [ -f "$example" ] && [ ! -f "$dir/.env" ] && sed -e 's/^LAN_IP=$/LAN_IP=192.0.2.10/' -e 's/^\([A-Za-z0-9_]*\)=$/\1=.\/ci-placeholder/' "$example" > "$dir/.env"
         done
         if docker compose -f "$file" config --quiet; then
           echo "ok      $file"
