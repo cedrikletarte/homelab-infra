@@ -89,6 +89,33 @@
     state: enabled
   tags: [firewall]
 
+# The clone holds the .env files and the secret configs (middlewares.yml, http.yaml, wg0.conf): the other
+# accounts (media) must not read them. Containers are not affected, Docker resolves bind mounts as root.
+- name: Admin home closed to the other accounts
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}"
+    state: directory
+    mode: "0750"
+  tags: [secrets]
+
+- name: Find the .env files of the clone
+  ansible.builtin.find:
+    paths: "{{ repo_dir }}"
+    patterns: [".env", ".env.bak-*"]
+    hidden: true
+    recurse: true
+  register: security_env_files
+  tags: [secrets]
+
+- name: .env files readable by their owner only
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "0600"
+  loop: "{{ security_env_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  tags: [secrets]
+
 - name: Deploy command allowed as root for the admin user
   ansible.builtin.copy:
     dest: /etc/sudoers.d/homelab-deploy
