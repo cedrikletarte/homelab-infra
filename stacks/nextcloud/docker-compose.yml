@@ -13,7 +13,9 @@ services:
     restart: always
     environment:
       - APACHE_PORT=11000
-      - APACHE_IP_BINDING=0.0.0.0
+      # Host port of the apache container on loopback only: Traefik reaches it through the proxy network,
+      # and a port open on the LAN would serve Nextcloud in plain HTTP without the CrowdSec middleware
+      - APACHE_IP_BINDING=127.0.0.1
       - APACHE_ADDITIONAL_NETWORK=proxy
       - SKIP_DOMAIN_VALIDATION=true
       - NEXTCLOUD_DATADIR=${NEXTCLOUD_DATADIR}
