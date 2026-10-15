@@ -117,7 +117,7 @@ services:
       - ./gluetun/scripts/portforward-down.sh:/gluetun/scripts/portforward-down.sh
       - ./gluetun/wg0.conf:/gluetun/wireguard/wg0.conf
     ports:
-      - 8080:8080
+      - "${LAN_IP:?set LAN_IP in .env}:8080:8080" # qBittorrent web UI (shares gluetun's network)
     restart: always
     networks:
       - internal
@@ -174,7 +174,7 @@ services:
       - TZ=${TZ}
       - UMASK=002
     ports:
-      - "7878:7878"
+      - "${LAN_IP:?set LAN_IP in .env}:7878:7878"
     volumes:
       - ${MEDIA_PATH}:/data
       - radarr:/config
@@ -201,7 +201,7 @@ services:
       - TZ=${TZ}
       - UMASK=002
     ports:
-      - "8989:8989"
+      - "${LAN_IP:?set LAN_IP in .env}:8989:8989"
     volumes:
       - ${MEDIA_PATH}:/data
       - sonarr:/config
@@ -227,7 +227,7 @@ services:
       - TZ=${TZ}
       - UMASK=002
     ports:
-      - "8686:8686"
+      - "${LAN_IP:?set LAN_IP in .env}:8686:8686"
     volumes:
       - ${MEDIA_PATH}:/data
       - lidarr:/config
@@ -252,7 +252,7 @@ services:
       - PGID=${MULTIMEDIA_GID}
       - TZ=${TZ}
     ports:
-      - "9696:9696"
+      - "${LAN_IP:?set LAN_IP in .env}:9696:9696"
     volumes:
       - prowlarr:/config
     restart: always
