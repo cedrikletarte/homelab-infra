@@ -1,6 +1,6 @@
 # Sends CrowdSec alerts to an n8n webhook (a workflow that journals them and posts to Discord).
-# Copy to http.yaml (gitignored) and set the real URL: the webhook has no authentication, so its
-# path is the only protection and must not be committed.
+# Copy to http.yaml (gitignored) and set the real URL, with the credentials of the webhook's Basic Auth
+# (n8n credential shared with the maintenance scripts).
 # n8n is not on the proxy network, so it is reached through the host's published port.
 type: http
 name: http_n8n
@@ -12,7 +12,7 @@ group_threshold: 10
 max_retry: 3
 timeout: 20s
 
-url: http://<server-lan-ip>:5678/webhook/<webhook-path>
+url: http://<user>:<password>@<server-lan-ip>:5678/webhook/<webhook-path>
 method: POST
 headers:
   Content-Type: application/json
