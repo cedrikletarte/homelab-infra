@@ -1,6 +1,6 @@
 # database — Shared Database (Postgres)
 
-The single Postgres instance reused by the stacks that do not need their own (ADR 0004). Reachable on the `db_network` Docker network as `postgres:5432`, and on the LAN address only.
+The single Postgres instance reused by the stacks that do not need their own (ADR 0004). Reachable on the `db_network` Docker network as `postgres:5432`, and on the server's loopback only: from another machine, open an SSH tunnel (`ssh -L 5432:127.0.0.1:5432 <user>@<server>`) and connect to `localhost:5432`.
 
 ## Databases and accounts
 

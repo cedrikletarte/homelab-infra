@@ -17,7 +17,8 @@ services:
     restart: unless-stopped
     shm_size: 128mb
     ports:
-      - '${LAN_IP:?set LAN_IP in .env}:5432:5432'
+      # Loopback only: the apps use db_network, a client on another machine goes through an SSH tunnel
+      - '127.0.0.1:5432:5432'
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
