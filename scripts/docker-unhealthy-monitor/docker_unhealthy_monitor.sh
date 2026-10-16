@@ -6,119 +6,118 @@
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+
+# Optional settings (defaults apply when absent from .env)
+COOLDOWN_MINUTES="${COOLDOWN_MINUTES:-60}"                      # a container still failing is reported again after this delay
+STATE_DIR="${STATE_DIR:-/var/tmp/docker-unhealthy-monitor}"    # one timestamp per reported container
 
 HOSTNAME=$(hostname)
 
 ALERTS=""
 LOGS=""
+FLAGGED=()
 TO_RESTART=()
-TO_RESTART_DIRS=()
 RESTARTED=""
 RESTART_ERRORS=""
 
-# ─── Build container → compose dir mapping ───────────────────────────────────
-declare -A CONTAINER_DIR
+mkdir -p "$STATE_DIR"
 
-for dir in "$HOMELAB_STACKS"/*/; do
-    basename_dir=$(basename "$dir")
-    [[ "$basename_dir" == _* ]] && continue
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+# Only the containers compose started from a stack of this clone are restarted (infrastructure/<stack>
+# or stacks/<stack>, archived `_` directories excluded). The others, such as the containers Nextcloud AIO
+# creates itself or the portfolio deployed by CI, are reported only.
+in_repo() {
+    local dir=$1
+    case "$dir" in
+        "$REPO_DIR"/infrastructure/*|"$REPO_DIR"/stacks/*) [[ "$(basename "$dir")" != _* ]] ;;
+        *) return 1 ;;
+    esac
+}
 
-    compose_file="${dir}docker-compose.yml"
-    [[ ! -f "$compose_file" ]] && continue
+# True when the container was already reported less than COOLDOWN_MINUTES ago
+recently_reported() {
+    local stamp="$STATE_DIR/$1.last"
+    [[ -f "$stamp" ]] && (( $(date +%s) - $(cat "$stamp") < COOLDOWN_MINUTES * 60 ))
+}
 
-    while IFS='|' read -r container_name _; do
-        container_name=$(echo "$container_name" | xargs)
-        [[ -n "$container_name" ]] && CONTAINER_DIR["$container_name"]="$dir"
-    done < <(docker compose -f "$compose_file" ps --format "{{.Name}}|${dir}" 2>/dev/null)
-done
+notify() {
+    local message=$1 status=$2 json
+    json=$(jq -n \
+        --arg content "$(echo -e "$message")" \
+        --arg source "docker_unhealthy_monitor" \
+        --arg status "$status" \
+        --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
+        '{content: $content, source: $source, status: $status, logs: $logs}')
+    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$json"
+}
 
 # ─── Inspect all containers ───────────────────────────────────────────────────
-while IFS='|' read -r name status state; do
-    name=$(echo "$name" | xargs)
-    status=$(echo "$status" | xargs)
-    state=$(echo "$state" | xargs)
-
+# `docker ps` lists the running, restarting and paused containers: a stopped one was stopped on purpose,
+# since every service runs with a restart policy
+while IFS='|' read -r name status state workdir; do
     # Handled elsewhere (e.g. gluetun by gluetun_watchdog.sh)
     [[ " $IGNORE_CONTAINERS " == *" $name "* ]] && continue
 
     LOGS+="=== $name ===\nState: $state | Status: $status\n\n"
 
-    dir="${CONTAINER_DIR[$name]}"
+    case "$state" in
+        running)
+            [[ "$status" == *"(unhealthy)"* ]] || continue
+            problem="⚠️ **$name** — UNHEALTHY | $status"
+            ;;
+        restarting)
+            # A restart loop needs investigation: restarting it once more would not help
+            problem="🔄 **$name** — RESTARTING LOOP | $status"
+            ;;
+        *)
+            problem="❌ **$name** — State: \`$state\` | $status"
+            ;;
+    esac
 
-    if [[ "$state" != "running" ]]; then
-        ALERTS+="❌ **$name** — State: \`$state\` | $status\n"
-        if [[ -n "$dir" ]]; then
-            TO_RESTART+=("$name")
-            TO_RESTART_DIRS+=("$dir")
-        fi
-    elif echo "$status" | grep -qi "unhealthy"; then
-        ALERTS+="⚠️ **$name** — UNHEALTHY | $status\n"
-        if [[ -n "$dir" ]]; then
-            TO_RESTART+=("$name")
-            TO_RESTART_DIRS+=("$dir")
-        fi
-    elif echo "$status" | grep -qi "restarting"; then
-        ALERTS+="🔄 **$name** — RESTARTING LOOP | $status\n"
+    FLAGGED+=("$name")
+    if recently_reported "$name"; then
+        echo "$name still failing, already reported less than ${COOLDOWN_MINUTES}min ago"
+        continue
     fi
-done < <(docker ps --format "{{.Names}}|{{.Status}}|{{.State}}")
+    date +%s >"$STATE_DIR/$name.last"
+    ALERTS+="$problem\n"
+    [[ "$state" != "restarting" ]] && in_repo "$workdir" && TO_RESTART+=("$name")
+done < <(docker ps --format '{{.Names}}|{{.Status}}|{{.State}}|{{.Label "com.docker.compose.project.working_dir"}}')
 
-# ─── No alerts: exit silently ─────────────────────────────────────────────────
+# A container that recovered is reported again as soon as it fails again
+for stamp in "$STATE_DIR"/*.last; do
+    [[ -e "$stamp" ]] || continue
+    name=$(basename "$stamp" .last)
+    [[ " ${FLAGGED[*]} " == *" $name "* ]] || rm -f "$stamp"
+done
+
+# ─── No new alert: exit silently ──────────────────────────────────────────────
 [[ -z "$ALERTS" ]] && exit 0
 
 # ─── Send alert notification ──────────────────────────────────────────────────
-NOW=$(date '+%Y-%m-%d %H:%M:%S')
 RESTART_PREVIEW=""
 [[ ${#TO_RESTART[@]} -gt 0 ]] && RESTART_PREVIEW="\n\n🔁 Auto-restart triggered for: $(IFS=', '; echo "${TO_RESTART[*]}")"
 
-ALERT_MESSAGE="🚨 **Container Alert — $HOSTNAME**\n${ALERTS}${RESTART_PREVIEW}\n\n🕐 $NOW"
-
-JSON=$(jq -n \
-    --arg content "$(echo -e "$ALERT_MESSAGE")" \
-    --arg source "docker_unhealthy_monitor" \
-    --arg status "alert" \
-    --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
-    '{content: $content, source: $source, status: $status, logs: $logs}')
-
-curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
+notify "🚨 **Container Alert — $HOSTNAME**\n${ALERTS}${RESTART_PREVIEW}\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "alert"
 
 # ─── Auto-restart unhealthy containers ───────────────────────────────────────
-for i in "${!TO_RESTART[@]}"; do
-    name="${TO_RESTART[$i]}"
-    dir="${TO_RESTART_DIRS[$i]}"
-
-    OUTPUT=$(cd "$dir" && docker compose restart "$name" 2>&1)
-    EXIT=$?
-
-    if [[ $EXIT -ne 0 ]]; then
-        RESTART_ERRORS+="❌ **$name** — restart failed\n"
-        LOGS+="=== restart $name ===\nERROR: $OUTPUT\n\n"
-    else
+for name in "${TO_RESTART[@]}"; do
+    if OUTPUT=$(docker restart "$name" 2>&1); then
         RESTARTED+="✅ **$name** restarted\n"
         LOGS+="=== restart $name ===\n$OUTPUT\n\n"
+    else
+        RESTART_ERRORS+="❌ **$name** — restart failed\n"
+        LOGS+="=== restart $name ===\nERROR: $OUTPUT\n\n"
     fi
 done
 
 # ─── Send restart result notification ────────────────────────────────────────
-NOW=$(date '+%Y-%m-%d %H:%M:%S')
-
 if [[ -n "$RESTARTED" || -n "$RESTART_ERRORS" ]]; then
-    RESTART_MESSAGE="🔁 **Auto-Restart — $HOSTNAME**\n"
-    [[ -n "$RESTARTED" ]] && RESTART_MESSAGE+="$RESTARTED"
-    [[ -n "$RESTART_ERRORS" ]] && RESTART_MESSAGE+="$RESTART_ERRORS"
-    RESTART_MESSAGE+="\n🕐 $NOW"
-
     STATUS="repaired"
     [[ -n "$RESTART_ERRORS" ]] && STATUS="error"
-
-    JSON=$(jq -n \
-        --arg content "$(echo -e "$RESTART_MESSAGE")" \
-        --arg source "docker_unhealthy_monitor" \
-        --arg status "$STATUS" \
-        --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
-        '{content: $content, source: $source, status: $status, logs: $logs}')
-
-    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
+    notify "🔁 **Auto-Restart — $HOSTNAME**\n${RESTARTED}${RESTART_ERRORS}\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "$STATUS"
 fi
