@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+# shellcheck source=../lib/notify.sh
+source "$SCRIPT_DIR/../lib/notify.sh"
 
 HOSTNAME=$(hostname)
 ALERTS=""
@@ -54,18 +56,6 @@ $(date)"
     STATUS="ok"
 fi
 
-# Send to n8n
-JSON=$(jq -n \
-    --arg content "$MESSAGE" \
-    --arg source "disk_health_check" \
-    --arg status "$STATUS" \
-    --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
-    '{content: $content, source: $source, status: $status, logs: $logs}')
-
-curl -s -o /dev/null \
-     -H "Content-Type: application/json" \
-     -X POST \
-     --data-binary @- \
-     "$WEBHOOK_URL" <<<"$JSON"
+notify disk_health_check "$STATUS" "$MESSAGE" "$LOGS"
 
 echo "===== Script SMART END : $(date '+%Y-%m-%d %H:%M:%S') ====="

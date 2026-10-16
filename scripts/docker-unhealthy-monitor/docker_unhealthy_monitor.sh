@@ -10,6 +10,8 @@ REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+# shellcheck source=../lib/notify.sh
+source "$SCRIPT_DIR/../lib/notify.sh"
 
 # Optional settings (defaults apply when absent from .env)
 COOLDOWN_MINUTES="${COOLDOWN_MINUTES:-60}"                      # a container still failing is reported again after this delay
@@ -42,17 +44,6 @@ in_repo() {
 recently_reported() {
     local stamp="$STATE_DIR/$1.last"
     [[ -f "$stamp" ]] && (( $(date +%s) - $(cat "$stamp") < COOLDOWN_MINUTES * 60 ))
-}
-
-notify() {
-    local message=$1 status=$2 json
-    json=$(jq -n \
-        --arg content "$(echo -e "$message")" \
-        --arg source "docker_unhealthy_monitor" \
-        --arg status "$status" \
-        --rawfile logs <(echo -e "$LOGS" | tail -c 100000) \
-        '{content: $content, source: $source, status: $status, logs: $logs}')
-    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$json"
 }
 
 # ─── Inspect all containers ───────────────────────────────────────────────────
@@ -102,7 +93,7 @@ done
 RESTART_PREVIEW=""
 [[ ${#TO_RESTART[@]} -gt 0 ]] && RESTART_PREVIEW="\n\n🔁 Auto-restart triggered for: $(IFS=', '; echo "${TO_RESTART[*]}")"
 
-notify "🚨 **Container Alert — $HOSTNAME**\n${ALERTS}${RESTART_PREVIEW}\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "alert"
+notify docker_unhealthy_monitor "alert" "🚨 **Container Alert — $HOSTNAME**\n${ALERTS}${RESTART_PREVIEW}\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "$LOGS"
 
 # ─── Auto-restart unhealthy containers ───────────────────────────────────────
 for name in "${TO_RESTART[@]}"; do
@@ -119,5 +110,5 @@ done
 if [[ -n "$RESTARTED" || -n "$RESTART_ERRORS" ]]; then
     STATUS="repaired"
     [[ -n "$RESTART_ERRORS" ]] && STATUS="error"
-    notify "🔁 **Auto-Restart — $HOSTNAME**\n${RESTARTED}${RESTART_ERRORS}\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "$STATUS"
+    notify docker_unhealthy_monitor "$STATUS" "🔁 **Auto-Restart — $HOSTNAME**\n${RESTARTED}${RESTART_ERRORS}\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "$LOGS"
 fi

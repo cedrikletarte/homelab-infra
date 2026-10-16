@@ -11,6 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+# shellcheck source=../lib/notify.sh
+source "$SCRIPT_DIR/../lib/notify.sh"
 
 PIA_WIREGUARD="${PIA_WIREGUARD:-$SCRIPT_DIR/../pia-wireguard/pia_wireguard.sh}"
 UNHEALTHY_MINUTES="${UNHEALTHY_MINUTES:-15}"
@@ -27,15 +29,9 @@ flock -n 9 || exit 0
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
-notify() {
-    local status=$1 message=$2 logs=$3
-    JSON=$(jq -n \
-        --arg content "$(echo -e "$message\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')")" \
-        --arg source "gluetun_watchdog" \
-        --arg status "$status" \
-        --rawfile logs <(printf '%s' "$logs" | tail -c 100000) \
-        '{content: $content, source: $source, status: $status, logs: $logs}')
-    curl -s -o /dev/null -H "Content-Type: application/json" -X POST --data-binary @- "$WEBHOOK_URL" <<<"$JSON"
+# Every message ends with the time it was sent
+report() {
+    notify gluetun_watchdog "$1" "$2\n\n🕐 $(date '+%Y-%m-%d %H:%M:%S')" "${3:-}"
 }
 
 internet_up() {
@@ -91,7 +87,7 @@ handle() {
     env_file="$workdir/.env"
 
     if [[ -z "$workdir" || -z "$service" || ! -f "$wg_conf" ]]; then
-        notify "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** unhealthy for ${minutes}min but can't be regenerated: not a compose container or no $WG_MOUNT bind mount"
+        report "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** unhealthy for ${minutes}min but can't be regenerated: not a compose container or no $WG_MOUNT bind mount"
         return 1
     fi
 
@@ -127,7 +123,7 @@ handle() {
     local gen_log new_cn
     gen_log=$(mktemp)
     if ! new_cn=$("$PIA_WIREGUARD" generate "$region" -o "$wg_conf" 2>"$gen_log" </dev/null) || [[ -z "$new_cn" ]]; then
-        notify "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** unhealthy for ${minutes}min ($cause)\nConfig regeneration in \`$region\` failed, next attempt in ${COOLDOWN_MINUTES}min" "$(cat "$gen_log")"
+        report "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** unhealthy for ${minutes}min ($cause)\nConfig regeneration in \`$region\` failed, next attempt in ${COOLDOWN_MINUTES}min" "$(cat "$gen_log")"
         log "regeneration failed: $(tail -1 "$gen_log")"
         rm -f "$gen_log"
         return 1
@@ -148,10 +144,10 @@ handle() {
     rm -f "$gen_log"
 
     if wait_healthy "$container"; then
-        notify "repaired" "✅ **Gluetun watchdog — $HOSTNAME**\n**$container** was unhealthy for ${minutes}min ($cause)\nNew config: \`$new_cn\` ($region), recreated: $service $(echo $dependents)$env_note" "$(echo -e "$logs")"
+        report "repaired" "✅ **Gluetun watchdog — $HOSTNAME**\n**$container** was unhealthy for ${minutes}min ($cause)\nNew config: \`$new_cn\` ($region), recreated: $service $(echo $dependents)$env_note" "$logs"
         log "$container healthy again on $new_cn"
     else
-        notify "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** regenerated on \`$new_cn\` ($region) but still not healthy after ${HEALTHY_TIMEOUT}s$env_note" "$(echo -e "$logs")"
+        report "error" "❌ **Gluetun watchdog — $HOSTNAME**\n**$container** regenerated on \`$new_cn\` ($region) but still not healthy after ${HEALTHY_TIMEOUT}s$env_note" "$logs"
         log "$container not healthy after regeneration on $new_cn"
     fi
 }

@@ -47,7 +47,7 @@ Maintenance and monitoring scripts, each with its own README (setup, config, cro
 | [`scripts/gluetun-watchdog`](scripts/gluetun-watchdog/README.md) | Regenerate a dead PIA WireGuard config and recreate gluetun + its dependents |
 | [`scripts/pia-wireguard`](scripts/pia-wireguard/README.md) | Browse PIA regions/servers and generate WireGuard configs for gluetun |
 
-All scripts report status via an n8n webhook: every message is logged to PostgreSQL (`homelab_alerts`, in the `homelab` database), and only non-`ok` statuses (`alert`, `error`, `repaired`, …) are sent to Discord.
+All scripts report status via an n8n webhook, through the shared `notify` function of [`scripts/lib/notify.sh`](scripts/lib/notify.sh): every message is logged to PostgreSQL (`homelab_alerts`, in the `homelab` database), and only non-`ok` statuses (`alert`, `error`, `repaired`, …) are sent to Discord.
 
 The n8n webhooks are authenticated, since anyone on the LAN can reach n8n: the scripts and CrowdSec share one Basic Auth credential, written in their webhook URL (`http://<user>:<password>@…`), and GitLab sends its *Secret token* in the `X-Gitlab-Token` header.
 

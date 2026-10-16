@@ -15,6 +15,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+# shellcheck source=../lib/notify.sh
+source "$SCRIPT_DIR/../lib/notify.sh"
 
 HOSTNAME=$(hostname)
 # Timestamp of the last fully successful backup, read by docker_pull_and_run.sh
@@ -48,35 +50,6 @@ COMPOSE_SCAN_DIRS=(
 
 # ─── Prepare temporary directory ─────────────────────────────────────────────
 mkdir -p "$BACKUP_TMP"
-
-# ─── Function: send notification to n8n ──────────────────────────────────────
-send_notification() {
-    local msg="$1"
-    local status="$2"
-    local logs="$3"
-    local json
-    # Everything goes through files (--rawfile), never through arguments: a single argument is limited to
-    # 128 KiB by the kernel. The content is capped below Discord's 2000 characters limit.
-    json=$(jq -n \
-        --rawfile content <(printf '%b' "$msg" | head -c 1900) \
-        --arg source "docker_backup" \
-        --arg status "$status" \
-        --rawfile logs <(printf '%b' "$logs" | tail -c 100000) \
-        '{content: $content, source: $source, status: $status, logs: $logs}')
-    if [[ -z "$json" ]]; then
-        echo "WARNING: could not build the notification (message: ${#msg} bytes, logs: ${#logs} bytes); sending a minimal one"
-        json=$(printf '{"source":"docker_backup","status":"%s","content":"Docker backup finished with status %s, but the full report could not be built. See the log on the server.","logs":""}' "$status" "$status")
-    fi
-    local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Content-Type: application/json" \
-        -X POST \
-        --data-binary @- \
-        "$WEBHOOK_URL" <<<"$json")
-    if [[ "$http_code" != "200" ]]; then
-        echo "WARNING: n8n webhook HTTP $http_code"
-    fi
-}
 
 # ─── Function: relative path from HOMELAB_DIR ────────────────────────────────
 rel_name() {
@@ -367,7 +340,7 @@ fi
 
 MESSAGE+="🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 
-send_notification "$MESSAGE" "$STATUS" "$LOGS"
+notify docker_backup "$STATUS" "$MESSAGE" "$LOGS"
 
 echo ""
 echo "===== Script docker backup END : $(date '+%Y-%m-%d %H:%M:%S') ====="

@@ -20,6 +20,8 @@ REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 set -a
 source "$SCRIPT_DIR/.env"
 set +a
+# shellcheck source=../lib/notify.sh
+source "$SCRIPT_DIR/../lib/notify.sh"
 
 # Optional settings (defaults apply when absent from .env)
 BACKUP_MARKER="${BACKUP_MARKER:-/var/lib/docker-backup/last_success}"   # written by docker_backup.sh
@@ -56,28 +58,6 @@ repo_git() {
     else
         sudo -H -u "$REPO_OWNER" git -C "$REPO_DIR" "$@"
     fi
-}
-
-send_notification() {
-    local msg="$1"
-    local status="$2"
-    local logs="$3"
-    local json
-    # Everything goes through files (--rawfile), never through arguments: a single argument is limited to
-    # 128 KiB by the kernel. The content is capped below Discord's 2000 characters limit.
-    json=$(jq -n \
-        --rawfile content <(printf '%b' "$msg" | head -c 1900) \
-        --arg source "docker_pull_and_run" \
-        --arg status "$status" \
-        --rawfile logs <(printf '%b' "$logs" | tail -c 100000) \
-        '{content: $content, source: $source, status: $status, logs: $logs}')
-    local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Content-Type: application/json" \
-        -X POST \
-        --data-binary @- \
-        "$WEBHOOK_URL" <<<"$json")
-    [[ "$http_code" != "200" ]] && echo "ERROR: n8n webhook failed with HTTP $http_code"
 }
 
 # ─── Bring the clone up to date ──────────────────────────────────────────────
@@ -208,7 +188,7 @@ MESSAGE+="🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 if [[ $DRY_RUN -eq 1 ]]; then
     printf '%b\n' "$MESSAGE"
 else
-    send_notification "$MESSAGE" "$STATUS" "$LOGS"
+    notify docker_pull_and_run "$STATUS" "$MESSAGE" "$LOGS"
 fi
 
 echo "===== Script docker deploy END : $(date '+%Y-%m-%d %H:%M:%S') ====="
