@@ -2,10 +2,10 @@
 
 Automated backup script for the homelab infrastructure (`homelab-infra/`):
 
-1. Stops active Docker stacks (recursive scan of `homelab-infra/stacks` and `homelab-infra/infrastructure`)
+1. Stops the Nextcloud AIO containers through AIO's own script (`docker compose down` would leave them running, since the mastercontainer creates them itself), then the active Docker stacks (recursive scan of `homelab-infra/stacks` and `homelab-infra/infrastructure`)
 2. Compresses each backup directory (`/var/lib/docker/volumes`, `/mnt/sdb1/immich`, `/mnt/sdb1/nextcloud`) into its own `.tar.gz`
-3. Copies `homelab-infra/` + the archives to OneDrive, **encrypted**, via an `rclone crypt` remote
-4. Restarts the stacks
+3. Restarts the stacks it stopped (a stack that was not running stays stopped), then the Nextcloud AIO containers, without updating their images
+4. Copies `homelab-infra/` + the archives to OneDrive, **encrypted**, via an `rclone crypt` remote
 5. Rotates OneDrive backups (keeps the last 7)
 6. Reports the result via an n8n webhook (Discord + PostgreSQL log)
 

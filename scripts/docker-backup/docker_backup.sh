@@ -1,10 +1,10 @@
 #!/bin/bash
 # =============================================================================
 # docker_backup.sh — Backup homelab to OneDrive
-# - Stop active containers (recursive scan of homelab-infra/)
+# - Stop the Nextcloud AIO containers, then the active stacks (recursive scan of homelab-infra/)
 # - Compress Docker volumes + /mnt/sdb1/immich + /mnt/sdb1/nextcloud
+# - Restart the stacks it stopped, then the Nextcloud AIO containers
 # - Copy homelab-infra + archives to OneDrive
-# - Restart containers
 # - Notify via n8n webhook (Discord + PostgreSQL log)
 # =============================================================================
 
@@ -106,6 +106,12 @@ run_compose_action() {
 
         cd "$dir" || continue
 
+        # Only the stacks this run stopped are started again: a stack stopped on purpose stays stopped
+        if [[ "$action" == "up -d" && " ${STOPPED_STACK_NAMES[*]} " != *" $stack "* ]]; then
+            echo "    $stack was not running before the backup, left stopped"
+            continue
+        fi
+
         if [[ "$action" == "down" ]]; then
             RUNNING=$(docker compose ps --status running -q 2>/dev/null)
             [[ -z "$RUNNING" ]] && echo "    $stack already stopped, skipping" && continue
@@ -127,9 +133,64 @@ run_compose_action() {
     done < <(find "${COMPOSE_SCAN_DIRS[@]}" -name "docker-compose.yml" 2>/dev/null | sort)
 }
 
+# ─── Nextcloud AIO ───────────────────────────────────────────────────────────
+# The mastercontainer is a compose stack, but the containers it creates (apache, database, nextcloud, ...)
+# are not: `docker compose down` leaves them running, and their database and data directory would be
+# archived while they change. They are stopped and started through AIO's own script (no image update),
+# before the mastercontainer goes down and once it is back.
+AIO_MASTER="nextcloud-aio-mastercontainer"
+AIO_STOPPED=""
+
+aio_running_containers() {
+    docker ps --format '{{.Names}}' | grep '^nextcloud-aio-' | grep -v "^$AIO_MASTER$"
+}
+
+aio_script() {
+    docker exec --env DAILY_BACKUP=0 --env CHECK_BACKUP=0 --env AUTOMATIC_UPDATES=0 \
+        --env START_CONTAINERS="$1" "$AIO_MASTER" /daily-backup.sh 2>&1
+}
+
+stop_aio() {
+    [[ -n "$(aio_running_containers)" ]] || return 0
+    echo "    Stopping the Nextcloud AIO containers..."
+    LOGS+="=== Nextcloud AIO stop ===\n$(aio_script 0)\n\n"
+    AIO_STOPPED=1
+    local left
+    left=$(aio_running_containers | tr '\n' ' ')
+    if [[ -n "$left" ]]; then
+        ERRORS+="• **Nextcloud AIO** — still running after the stop, its archive may be inconsistent: \`${left% }\`\n"
+        echo "    ERROR: still running: $left"
+    else
+        echo "    ✓ Nextcloud AIO containers stopped"
+    fi
+}
+
+start_aio() {
+    [[ -n "$AIO_STOPPED" ]] || return 0
+    echo "    Starting the Nextcloud AIO containers..."
+    local waited=0
+    until [[ "$(docker inspect -f '{{.State.Health.Status}}' "$AIO_MASTER" 2>/dev/null)" == "healthy" ]]; do
+        if (( waited >= 300 )); then
+            ERRORS+="• **Nextcloud AIO** — mastercontainer not healthy after 300s, containers not started: start them from its interface\n"
+            echo "    ERROR: $AIO_MASTER not healthy, Nextcloud left stopped"
+            return
+        fi
+        sleep 10
+        waited=$((waited + 10))
+    done
+    LOGS+="=== Nextcloud AIO start ===\n$(aio_script 1)\n\n"
+    if docker ps --format '{{.Names}}' | grep -q '^nextcloud-aio-apache$'; then
+        echo "    ✓ Nextcloud AIO containers started"
+    else
+        ERRORS+="• **Nextcloud AIO** — containers not started again: start them from its interface\n"
+        echo "    ERROR: Nextcloud AIO containers not started"
+    fi
+}
+
 # ─── Step 1: Stop all active stacks ──────────────────────────────────────────
 echo ""
 echo ">>> Step 1/5 — Stopping containers..."
+stop_aio
 run_compose_action "down" "Stopping"
 echo "  Stacks stopped: ${#STOPPED_STACK_NAMES[@]}"
 
@@ -172,6 +233,7 @@ done
 echo ""
 echo ">>> Step 3/5 — Restarting containers..."
 run_compose_action "up -d" "Starting"
+start_aio
 echo "  Stacks restarted: ${#STARTED_STACK_NAMES[@]}"
 
 # ─── Step 4: Upload to OneDrive via rclone ───────────────────────────────────
@@ -286,6 +348,7 @@ fi
 if [[ ${#STARTED_STACK_NAMES[@]} -gt 0 ]]; then
     MESSAGE+="▶️ **Stacks restarted** (${#STARTED_STACK_NAMES[@]}) :\n$STARTED_LIST\n"
 fi
+[[ -n "$AIO_STOPPED" ]] && MESSAGE+="☁️ Nextcloud AIO containers stopped during the archiving\n\n"
 
 if [[ -n "$ERRORS" ]]; then
     MESSAGE+="❌ **Errors — $HOSTNAME**\n$ERRORS\n"
