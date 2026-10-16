@@ -26,6 +26,24 @@
     name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
     state: present
 
+# Without it, json-file logs grow without limit. The local driver rotates (5 files of 20 MB per container,
+# compressed) and keeps `docker logs` working. No restart handler: restarting the engine stops every
+# container, so it applies at the next engine restart (reboot, upgrade), to each container created after it.
+- name: Container logs rotated
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      {
+        "log-driver": "local",
+        "log-opts": {
+          "max-size": "20m",
+          "max-file": "5"
+        }
+      }
+
 - name: Docker running
   ansible.builtin.service:
     name: docker
