@@ -76,7 +76,7 @@ renovate-config:
 # this runner, and the job ends as soon as it is started. The result comes through the usual notification.
 deploy:
   stage: deploy
-  image: alpine:3.24.2
+  image: alpine:3.24.3
   rules:
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DEPLOY_SSH_KEY && $DEPLOY_TARGET
   resource_group: production
