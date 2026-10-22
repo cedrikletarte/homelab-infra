@@ -2,7 +2,7 @@ name: gitlab
 services:
   # gitlab: version system management
   gitlab:
-    image: gitlab/gitlab-ee:19.4.2-ee.0
+    image: gitlab/gitlab-ee:19.5.1-ee.0
     container_name: gitlab
     restart: always
     security_opt:
