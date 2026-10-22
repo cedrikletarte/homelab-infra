@@ -26,7 +26,7 @@ services:
 
   # Seerr: Media request management and discovery tool
   seerr:
-    image: ghcr.io/seerr-team/seerr:v3.5.0
+    image: ghcr.io/seerr-team/seerr:v3.5.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -130,7 +130,7 @@ services:
 
   # qBittorrent: BitTorrent client
   qbittorrent:
-    image: linuxserver/qbittorrent:5.2.4_v2.0.15-ls479
+    image: linuxserver/qbittorrent:5.3.0_v2.1.2-ls484
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -158,7 +158,7 @@ services:
 
   # Radarr: Movie collection manager
   radarr:
-    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls320
+    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls323
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -185,7 +185,7 @@ services:
 
   # Sonarr: TV series collection manager
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.20.3014-ls328
+    image: lscr.io/linuxserver/sonarr:4.0.20.3014-ls329
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -211,7 +211,7 @@ services:
 
   # Lidarr: Music collection manager
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls43
+    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls45
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -237,7 +237,7 @@ services:
 
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.6.5.5623-ls163
+    image: lscr.io/linuxserver/prowlarr:2.6.5.5623-ls165
     security_opt:
       - no-new-privileges:true
     cap_drop:
