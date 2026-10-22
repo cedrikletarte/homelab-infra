@@ -40,7 +40,7 @@ services:
   # Prometheus: scrapes the exporters below, Traefik and CrowdSec (on the proxy network)
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.15.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
