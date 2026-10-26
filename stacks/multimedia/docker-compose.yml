@@ -158,7 +158,7 @@ services:
 
   # Radarr: Movie collection manager
   radarr:
-    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls323
+    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls324
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -211,7 +211,7 @@ services:
 
   # Lidarr: Music collection manager
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.0.4875-ls45
+    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls46
     security_opt:
       - no-new-privileges:true
     cap_drop:
