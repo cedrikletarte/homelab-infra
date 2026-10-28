@@ -2,7 +2,7 @@ services:
   # Cloudflare DDNS: Updates Cloudflare DNS records for VPN access
   cloudflare-ddns:
     container_name: cloudflare-ddns
-    image: favonia/cloudflare-ddns:1.17.1
+    image: favonia/cloudflare-ddns:1.18.0
     restart: always
     user: "1000:1000"
     read_only: true
