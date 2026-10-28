@@ -237,7 +237,7 @@ services:
 
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.6.5.5623-ls165
+    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls166
     security_opt:
       - no-new-privileges:true
     cap_drop:
