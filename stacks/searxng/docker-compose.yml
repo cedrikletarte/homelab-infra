@@ -62,6 +62,25 @@ services:
     volumes:
       - valkey-data:/data/
 
+  # FlareSolverr: headless browser the MCP server falls back to when a site blocks a plain fetch.
+  # Kept off Gluetun (sites block VPN exits) and on its own network, published on the host loopback only
+  flaresolverr:
+    container_name: searxng-flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+    ports:
+      - "127.0.0.1:8191:8191"
+    restart: always
+    networks:
+      - flaresolverr
+
 volumes:
   core-data:
   valkey-data:
@@ -69,5 +88,6 @@ volumes:
 
 networks:
   default:
+  flaresolverr:
   proxy:
     external: true

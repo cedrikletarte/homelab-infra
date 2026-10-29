@@ -15,3 +15,6 @@ engines:
 
 search:
   favicon_resolver: "duckduckgo"
+  formats:
+    - html
+    - json

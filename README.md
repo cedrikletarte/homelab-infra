@@ -14,7 +14,7 @@ Personal Docker-based homelab managed with `docker compose`, using Traefik as a 
 | `stacks/multimedia` | FlareSolverr, Gluetun, Lidarr, Plex, Prowlarr, qBittorrent, Radarr, Recyclarr, Seerr, Sonarr |
 | `stacks/immich` | Immich |
 | `stacks/gitlab` | GitLab EE, GitLab Runner |
-| `stacks/searxng` | Gluetun, SearXNG, Valkey |
+| `stacks/searxng` | FlareSolverr, Gluetun, SearXNG, Valkey |
 | `stacks/monitoring` | Grafana, Prometheus, node-exporter, cAdvisor, smartctl-exporter |
 
 ---
