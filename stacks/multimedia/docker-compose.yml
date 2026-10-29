@@ -261,7 +261,7 @@ services:
 
   # Recyclarr: Syncs custom formats and their scores to Radarr and Sonarr (daily)
   recyclarr:
-    image: ghcr.io/recyclarr/recyclarr:8.8.0
+    image: ghcr.io/recyclarr/recyclarr:8.8.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
