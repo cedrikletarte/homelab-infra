@@ -88,7 +88,7 @@ services:
       - proxy
 
   crowdsec:
-    image: crowdsecurity/crowdsec:v1.8.1
+    image: crowdsecurity/crowdsec:v1.8.2
     security_opt:
       - no-new-privileges:true
     cap_drop:
