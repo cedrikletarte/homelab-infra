@@ -62,7 +62,7 @@ services:
     restart: always
 
   traefik:
-    image: traefik:v3.7.16
+    image: traefik:v3.7.17
     security_opt:
       - no-new-privileges:true
     cap_drop:
