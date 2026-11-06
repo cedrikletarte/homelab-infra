@@ -105,7 +105,7 @@ The `deploy` job only runs once `DEPLOY_SSH_KEY` and `DEPLOY_TARGET` exist. Its 
    - `DEPLOY_KNOWN_HOSTS`, type **File**: the output of `ssh-keyscan -t ed25519 <server LAN address>`
    - `DEPLOY_TARGET`, type Variable: `<user>@<server LAN address>`
 
-A second deploy started while one runs is refused by `systemd-run` (the unit exists), so deploys never overlap. Anyone who can push or merge to `main` can run code as root on the server through this job (the script itself is in the repo), as the nightly cron already allowed: keep `main` protected.
+A second deploy started while one runs is refused by `systemd-run` (the unit exists), so deploys never overlap: the `deploy` job then retries every 30 seconds, up to 20 minutes, so a merge made during a deploy is deployed right after it. Anyone who can push or merge to `main` can run code as root on the server through this job (the script itself is in the repo), as the nightly cron already allowed: keep `main` protected.
 
 ---
 

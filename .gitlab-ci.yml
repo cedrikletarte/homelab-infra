@@ -86,7 +86,19 @@ deploy:
     # GitLab strips the final newline of a File variable, and OpenSSH rejects a key without it ("error in libcrypto")
     - echo >> "$DEPLOY_SSH_KEY"
     - chmod 600 "$DEPLOY_SSH_KEY"
-    - ssh -i "$DEPLOY_SSH_KEY" -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o BatchMode=yes "$DEPLOY_TARGET"
+    # While a deploy runs (several merges in a row), systemd-run refuses to start the unit again. The running
+    # deploy fetched main before this commit, so wait for it to end and start the next one, up to 20 minutes
+    - |
+      attempt=1
+      until out=$(ssh -i "$DEPLOY_SSH_KEY" -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" -o BatchMode=yes "$DEPLOY_TARGET" 2>&1); do
+        echo "$out"
+        case "$out" in *"already loaded"*) ;; *) exit 1 ;; esac
+        [ "$attempt" -ge 40 ] && { echo "The running deploy did not end within 20 minutes"; exit 1; }
+        echo "A deploy is already running, retrying in 30s ($attempt/40)"
+        attempt=$((attempt + 1))
+        sleep 30
+      done
+      echo "$out"
 
 # Opens and updates the dependency merge requests. Runs from a pipeline schedule (and only when the
 # token is set), with RENOVATE_TOKEN (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.
