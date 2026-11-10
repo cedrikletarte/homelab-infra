@@ -5,7 +5,8 @@
 # custom formats or scores is overwritten at the next sync (daily). Edit this file instead.
 #
 # The profiles are referenced by name only, so their qualities, cutoff and upgrade settings stay
-# as set in the UI: the quality always wins, the custom format score only breaks ties.
+# as set in the UI. The quality always wins and the custom format score breaks ties, but a release
+# without French audio is rejected: only MULTI FR+EN reaches the profiles' minimum score (5000).
 #
 # Homemade custom formats (MULTI, HDR10, x265) live in custom-formats/, the others come from
 # TRaSH Guides (https://trash-guides.info). Their trash_id is in the file name of
@@ -18,17 +19,27 @@ radarr:
 
     quality_profiles:
       - name: HD-1080p
+        min_format_score: 5000
         reset_unmatched_scores:
           enabled: true
       - name: Ultra-HD
+        min_format_score: 5000
         reset_unmatched_scores:
           enabled: true
 
     custom_formats:
-      # French audio: a tie-breaker between releases of the same quality
+      # French audio is required: MULTI FR+EN alone reaches the minimum score (5000)
+      - trash_ids:
+          - a39b4e06388f17fe8171747f765c660f  # MULTI FR+EN
+        score: 5000
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      # A MULTI keyword in the title only: a bonus, never enough on its own
+      # ("Multi" on public trackers can mean English + Hindi)
       - trash_ids:
           - 6ec9b031bbb4eb404d3957a2fed107e3  # MULTI KEYWORDS
-          - a39b4e06388f17fe8171747f765c660f  # MULTI FR+EN
         score: 1000
         assign_scores_to:
           - name: HD-1080p
@@ -48,7 +59,7 @@ radarr:
           - name: HD-1080p
           - name: Ultra-HD
 
-      # Rejected (TRaSH score -10000, below the profiles' minimum score of 0)
+      # Rejected (TRaSH score -10000, below the profiles' minimum score of 5000 whatever the bonuses)
       - trash_ids:
           - 923b6abef9b17f937fab56cfcf89e1f1  # DV (w/o HDR fallback): no HDR10 layer, Plex would have to transcode
           - ed38b889b31be83fda192888e2286d83  # BR-DISK
@@ -69,17 +80,27 @@ sonarr:
 
     quality_profiles:
       - name: HD-1080p
+        min_format_score: 5000
         reset_unmatched_scores:
           enabled: true
       - name: Ultra-HD
+        min_format_score: 5000
         reset_unmatched_scores:
           enabled: true
 
     custom_formats:
-      # French audio: a tie-breaker between releases of the same quality
+      # French audio is required: MULTI FR+EN alone reaches the minimum score (5000)
+      - trash_ids:
+          - 5bebaf68a1dfe7b77133bb6342243371  # MULTI FR+EN
+        score: 5000
+        assign_scores_to:
+          - name: HD-1080p
+          - name: Ultra-HD
+
+      # A MULTI keyword in the title only: a bonus, never enough on its own
+      # ("Multi" on public trackers can mean English + Hindi)
       - trash_ids:
           - 2e6614d5b89015d954eea11a18f9b90d  # MULTI KEYWORDS
-          - 5bebaf68a1dfe7b77133bb6342243371  # MULTI FR+EN
         score: 1000
         assign_scores_to:
           - name: HD-1080p
@@ -99,7 +120,7 @@ sonarr:
           - name: HD-1080p
           - name: Ultra-HD
 
-      # Rejected (TRaSH score -10000, below the profiles' minimum score of 0)
+      # Rejected (TRaSH score -10000, below the profiles' minimum score of 5000 whatever the bonuses)
       - trash_ids:
           - 9b27ab6498ec0f31a3353992e19434ca  # DV (w/o HDR fallback): no HDR10 layer, Plex would have to transcode
           - 85c61753df5da1fb2aab6f2a47426b09  # BR-DISK
