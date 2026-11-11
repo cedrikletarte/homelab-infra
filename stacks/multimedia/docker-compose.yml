@@ -79,7 +79,7 @@ services:
 
   # Gluetun: VPN client container to route traffic through a VPN
   gluetun:
-    image: qmcgaw/gluetun:latest@sha256:4af0c804003481e100180e1f8d4d5e9c48163fedc0f88d061881b615aef9d183
+    image: qmcgaw/gluetun:latest@sha256:75df789dea20551fa973f808133a712700bf198518f9d49ed581287777508556
     container_name: gluetun
     cap_add:
       - NET_ADMIN
