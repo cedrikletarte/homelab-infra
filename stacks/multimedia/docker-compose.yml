@@ -211,7 +211,7 @@ services:
 
   # Lidarr: Music collection manager
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls47
+    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls48
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -237,7 +237,7 @@ services:
 
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls167
+    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls168
     security_opt:
       - no-new-privileges:true
     cap_drop:
