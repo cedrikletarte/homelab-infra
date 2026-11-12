@@ -3,6 +3,9 @@
   "extends": ["config:recommended", ":semanticCommits", ":disableRateLimiting"],
   "timezone": "America/Toronto",
   "labels": ["dependencies"],
+  "description": "Merge requests (everything not automerged) are opened and updated on Saturdays only, so they come in one weekly batch",
+  "schedule": ["* 0-5 * * 6"],
+  "internalChecksFilter": "strict",
   "packageRules": [
     {
       "description": "Images this repo does not version: Nextcloud AIO updates itself from its own interface, portfolio-app is built locally by CI",
@@ -32,11 +35,6 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-[0-9a-f]+$"
     },
     {
-      "description": "SearXNG publishes almost every day: one merge request a week is enough",
-      "matchPackageNames": ["docker.io/searxng/searxng"],
-      "schedule": ["* * * * 6"]
-    },
-    {
       "description": "Immich server and machine learning must always run the same version",
       "matchPackageNames": ["ghcr.io/immich-app/immich-server", "ghcr.io/immich-app/immich-machine-learning"],
       "groupName": "immich"
@@ -53,14 +51,14 @@
       "enabled": false
     },
     {
-      "description": "The media apps have the same release rhythm: one merge request for all of them",
+      "description": "The media apps have the same release rhythm: their major updates come in one merge request",
       "matchFileNames": ["stacks/multimedia/**"],
       "matchPackageNames": ["!qmcgaw/gluetun", "!plexinc/pms-docker"],
       "groupName": "multimedia"
     },
     {
-      "description": "Patch releases and digest refreshes merge on their own once the pipeline passes, except for services where a bad release loses data, access or the network",
-      "matchUpdateTypes": ["patch", "digest"],
+      "description": "Minor, patch and digest updates of the services where a bad release is an inconvenience: one branch, pushed to main without a merge request once its pipeline passes, between 02:00 and 06:00, never on Sunday (the weekly backup stops and restarts the stacks from 03:00). A failed pipeline opens a merge request instead. A release waits 3 days when its registry gives a date; lscr.io, ghcr.io and most others give none, and requiring one would hold their updates forever",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
       "matchPackageNames": [
         "!postgres",
         "!docker.io/valkey/valkey",
@@ -74,7 +72,28 @@
         "!/(^|/)linuxserver/wireguard$/",
         "!qmcgaw/gluetun"
       ],
-      "automerge": true
+      "groupName": "non-major",
+      "schedule": ["at any time"],
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "branch",
+      "automergeSchedule": ["* 2-5 * * 1-6"]
+    },
+    {
+      "description": "The same updates of the services where a bad release loses data, access or the network: one weekly merge request, merged by hand (Immich and GitLab keep their own groups)",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchPackageNames": [
+        "postgres",
+        "docker.io/valkey/valkey",
+        "vaultwarden/server",
+        "traefik",
+        "crowdsecurity/crowdsec",
+        "cloudflare/cloudflared",
+        "/(^|/)linuxserver/wireguard$/",
+        "qmcgaw/gluetun"
+      ],
+      "groupName": "core services"
     }
   ]
 }

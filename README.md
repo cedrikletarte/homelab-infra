@@ -55,17 +55,16 @@ The n8n webhooks are authenticated, since anyone on the LAN can reach n8n: the s
 
 ## Updates and CI
 
-Every image is pinned to an exact version in its `docker-compose.yml` (`traefik:v3.6.25`, not `traefik:v3.6` or `latest`), so the repo always says what runs. [Renovate](https://docs.renovatebot.com/) looks for newer versions and opens one merge request per update, with the release notes. Its rules are in `renovate.json`:
+Every image is pinned to an exact version in its `docker-compose.yml` (`traefik:v3.6.25`, not `traefik:v3.6` or `latest`), so the repo always says what runs. [Renovate](https://docs.renovatebot.com/) looks for newer versions and either pushes them to `main` itself or opens a merge request with the release notes. Its rules are in `renovate.json`:
 
-- **Merged automatically** once the pipeline passes: patch releases and digest refreshes, except for Postgres, Valkey, GitLab, Immich, Vaultwarden, Traefik, CrowdSec, cloudflared, WireGuard and Gluetun, which always wait for a manual merge
-- **Grouped**: Immich server and machine learning (same version required), GitLab and its runner, the media apps of `stacks/multimedia`
+- **Merged automatically, without a merge request**: minor, patch and digest updates, except for the services of the next point, go in one `renovate/non-major` branch, which Renovate pushes to `main` once its pipeline passes, between 02:00 and 06:00 and never on Sunday (the weekly backup stops and restarts the stacks from 03:00). A release waits 3 days first when its registry gives a release date (Docker Hub; lscr.io and ghcr.io give none). If the pipeline fails, Renovate opens a merge request instead
+- **Merge requests, merged by hand, opened and updated on Saturdays**: every major update (the media apps of `stacks/multimedia` in one), and the minor, patch and digest updates of the services where a bad release loses data, access or the network, in three groups: `core services` (Postgres, Valkey, Vaultwarden, Traefik, CrowdSec, cloudflared, WireGuard, Gluetun), `immich` (server and machine learning, same version required) and `gitlab` (with its runner)
 - **Never proposed**: Nextcloud AIO (updates itself), `portfolio-app` (built by CI), Immich's database and Redis (chosen by Immich's releases), Postgres and Valkey major versions (need a data migration)
 - **Gluetun** publishes no versioned tag matching the development build in use, so it is pinned as `latest@sha256:…` and each new build comes as a digest update
-- **SearXNG** releases almost daily, so its merge request is opened on Saturdays only
 
 A merged update is deployed by `docker_pull_and_run.sh`: it fast-forwards the server's clone to `main` and runs `docker compose up -d` in every running stack, behind the backup check. The `deploy` job starts it over SSH as soon as a push to `main` (a merged merge request) passed the checks, and the nightly cron run catches anything a failed deploy left behind. The clone is also the working copy: with local commits not pushed, the script does not merge and reports it instead, so push your commits.
 
-The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `main`:
+The pipeline (`.gitlab-ci.yml`) runs on every merge request, every push to `main` and every push to a `renovate/` branch that has no merge request (the automerge branch):
 
 | Job | Checks |
 |---|---|
@@ -75,16 +74,16 @@ The pipeline (`.gitlab-ci.yml`) runs on every merge request and every push to `m
 | `renovate-config` | `renovate.json`, only when it changes |
 | `deploy` | Nothing: starts the deploy on the server, only on a push to `main` and once the jobs above passed |
 
-The `renovate` job runs only from a pipeline schedule.
+The `renovate` job runs only from a pipeline schedule. It runs every hour at night: a run creates or updates the automerge branch, its pipeline runs, and the next run inside the automerge window pushes it to `main`.
 
 ### One-time setup in GitLab
 
-1. In *Settings > Access tokens*, create a project access token named `renovate-bot`, role **Maintainer** (a Developer cannot merge into the protected `main`, which automerge needs), scopes `api` and `write_repository`. GitLab creates the matching bot user itself
+1. In *Settings > Access tokens*, create a project access token named `renovate-bot`, role **Maintainer** (a Developer cannot push to the protected `main`, which automerge needs), scopes `api` and `write_repository`. GitLab creates the matching bot user itself
 2. Create a GitHub personal access token (fine-grained, public repositories read-only, no permission needed): Renovate uses it to read release notes without hitting GitHub's anonymous rate limit
 3. In *Settings > CI/CD > Variables*, add `RENOVATE_TOKEN` (the bot token) and `GITHUB_COM_TOKEN`, both **Masked** and **Protected**
-4. In *Build > Pipeline schedules*, add a schedule on `main`, for example `0 1 * * *` (01:00, before `docker_pull_and_run.sh`)
+4. In *Build > Pipeline schedules*, add a schedule on `main`, `30 1-5 * * *`, timezone America/Toronto: at 01:30 Renovate prepares the branches, at 02:30, 03:30, 04:30 and 05:30 it pushes the automerge branch. On the half hour, so that it does not start with the 02:00 `docker_pull_and_run.sh`
 5. Check that the runner picks untagged jobs (*Settings > CI/CD > Runners*, edit the runner, *Run untagged jobs*). This shared runner does not mount the Docker socket (`volumes = ["/cache"]` in its `config.toml`): a job with the socket is root on the server, and no job of this repo needs it (`docker compose config` works without a daemon). Only the portfolio's build, deploy and scan jobs get it, through a second runner tagged `docker-host`, protected and locked to that project
-6. Optional, for automerge: *Settings > Merge requests*, enable *Pipelines must succeed*
+6. In *Settings > Repository > Protected branches*, `main` must allow Maintainers to push: the automerge branch is pushed, not merged. Optional: *Settings > Merge requests*, enable *Pipelines must succeed* for the merge requests
 
 ### One-time setup of the deploy on merge
 

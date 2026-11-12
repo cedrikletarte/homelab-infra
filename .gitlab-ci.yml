@@ -1,5 +1,5 @@
-# Checks every merge request and every push to main, then deploys main once the checks pass;
-# the scheduled pipeline only runs Renovate.
+# Checks every merge request, every push to main and Renovate's automerge branch, then deploys main once
+# the checks pass; the scheduled pipeline only runs Renovate.
 # Setup (CI/CD variables, pipeline schedule, deploy key): see the "Updates and CI" section of README.md.
 
 stages:
@@ -13,6 +13,9 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "web"
+    # Renovate pushes its automerge branch to main only once a pipeline passed on it, and that branch has no
+    # merge request. A Renovate branch that has one is checked by the merge request pipeline instead
+    - if: $CI_COMMIT_BRANCH =~ /^renovate\// && $CI_OPEN_MERGE_REQUESTS == null
 
 .validate:
   stage: validate
@@ -100,8 +103,9 @@ deploy:
       done
       echo "$out"
 
-# Opens and updates the dependency merge requests. Runs from a pipeline schedule (and only when the
-# token is set), with RENOVATE_TOKEN (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.
+# Opens and updates the dependency merge requests, and pushes the automerge branch to main. Runs from a
+# pipeline schedule, hourly at night (see README.md), and only when the token is set, with RENOVATE_TOKEN
+# (GitLab bot) and GITHUB_COM_TOKEN (release notes) as CI/CD variables.
 renovate:
   stage: renovate
   image: ghcr.io/renovatebot/renovate:44.216.5
