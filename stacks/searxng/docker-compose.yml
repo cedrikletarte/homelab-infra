@@ -43,7 +43,7 @@ services:
 
   core:
     container_name: searxng-core
-    image: docker.io/searxng/searxng:2026.11.12-de722ab1b
+    image: docker.io/searxng/searxng:2026.11.13-8a53a6aa5
     restart: always
     network_mode: service:gluetun
     depends_on:
