@@ -7,7 +7,7 @@ services:
   # Gluetun: VPN client so outbound engine requests don't expose the server's IP
   gluetun:
     container_name: searxng-gluetun
-    image: qmcgaw/gluetun:latest@sha256:4af0c804003481e100180e1f8d4d5e9c48163fedc0f88d061881b615aef9d183
+    image: qmcgaw/gluetun:latest@sha256:cbafe0945d0fe5a3c55ca64d43a85c5db270458f4c645ee65797b527f6f57a64
     cap_add:
       - NET_ADMIN
     devices:
