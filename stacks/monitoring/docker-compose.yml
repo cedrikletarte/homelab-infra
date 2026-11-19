@@ -81,7 +81,7 @@ services:
   # cAdvisor: per-container CPU, memory and network. Tuned down for an old CPU.
   cadvisor:
     container_name: cadvisor
-    image: ghcr.io/google/cadvisor:v0.61.0
+    image: ghcr.io/google/cadvisor:v0.61.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
