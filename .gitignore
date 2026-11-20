@@ -21,7 +21,7 @@ legacy
 
 # -- Claude --
 CLAUDE.md
-CONTEXT.md
+GLOSSARY.md
 
 # -- CrowdSec --
 **/crowdsec/notifications/http.yaml
