@@ -63,7 +63,7 @@ services:
   # ufw lets that network reach it (ansible security role).
   node-exporter:
     container_name: node-exporter
-    image: prom/node-exporter:v1.12.1
+    image: prom/node-exporter:v1.13.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
