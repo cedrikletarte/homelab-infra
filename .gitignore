@@ -28,3 +28,6 @@ GLOSSARY.md
 
 # -- Ansible --
 ansible/host_vars/homelab.yml
+
+# -- Beads (local ticket tracker) --
+.beads/
