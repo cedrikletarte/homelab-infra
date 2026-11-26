@@ -16,7 +16,6 @@ stacks/searxng/core-config/settings.yml
 # -- Folder --
 stacks-unused
 cloudflare
-docs
 legacy
 
 # -- Claude --
