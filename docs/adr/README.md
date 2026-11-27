@@ -27,3 +27,4 @@ A new decision that only adds to an older one (an exception, a new case) does no
 | ADR | Decision | Status |
 |---|---|---|
 | [0001](0001-proxmox-host-with-one-vm-per-role.md) | The new server runs Proxmox VE, with Docker only inside one VM per role | Accepted |
+| [0002](0002-storage-layout.md) | The host boots from an NVMe mirror and keeps all data on one RAIDZ2 pool | Accepted |
