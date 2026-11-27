@@ -130,7 +130,7 @@ services:
 
   # qBittorrent: BitTorrent client
   qbittorrent:
-    image: linuxserver/qbittorrent:5.3.0_v2.1.2-ls484
+    image: linuxserver/qbittorrent:5.3.1_v2.1.3-ls490
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -211,7 +211,7 @@ services:
 
   # Lidarr: Music collection manager
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls49
+    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls50
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -237,7 +237,7 @@ services:
 
   # Prowlarr: Indexer manager/proxy for Sonarr, Radarr, and other applications
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:3.0.2.5780-ls169
+    image: lscr.io/linuxserver/prowlarr:3.1.0.5799-ls170
     security_opt:
       - no-new-privileges:true
     cap_drop:
