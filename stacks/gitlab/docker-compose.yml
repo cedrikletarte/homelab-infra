@@ -22,7 +22,7 @@ services:
 
   # gitlab runner: Pipeline runner for gitlab
   gitlab-runner:
-    image: gitlab/gitlab-runner:v19.6.0
+    image: gitlab/gitlab-runner:v19.6.1
     security_opt:
       - no-new-privileges:true
     cap_drop:
